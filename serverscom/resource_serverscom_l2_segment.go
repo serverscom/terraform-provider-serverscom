@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	scgo "github.com/serverscom/serverscom-go-client/pkg"
 )
 
@@ -42,12 +43,15 @@ func resourceServerscomL2Segment() *schema.Resource {
 				Optional: true,
 			},
 			"type": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:         schema.TypeString,
+				Required:     true,
+				ValidateFunc: validation.StringInSlice([]string{"private", "public"}, false),
 			},
 			"location_group": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:             schema.TypeString,
+				Required:         true,
+				ValidateFunc:     validation.NoZeroValues,
+				DiffSuppressFunc: compareStrings,
 			},
 			"member": {
 				Type:     schema.TypeSet,
@@ -56,12 +60,14 @@ func resourceServerscomL2Segment() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"id": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:         schema.TypeString,
+							Required:     true,
+							ValidateFunc: validation.NoZeroValues,
 						},
 						"mode": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:         schema.TypeString,
+							Required:     true,
+							ValidateFunc: validation.StringInSlice([]string{"native", "trunk"}, false),
 						},
 						"status": {
 							Type:     schema.TypeString,
@@ -318,7 +324,7 @@ func getLocationGroup(groupType string, groupCode string) (*scgo.L2LocationGroup
 	}
 
 	for _, locationGroup := range locationGroups {
-		if locationGroup.GroupType == groupType && locationGroup.Code == groupCode {
+		if locationGroup.GroupType == groupType && normalizeString(locationGroup.Code) == normalizeString(groupCode) {
 			return &locationGroup, nil
 		}
 	}

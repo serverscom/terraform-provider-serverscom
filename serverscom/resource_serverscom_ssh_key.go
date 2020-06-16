@@ -25,8 +25,9 @@ func resourceServerscomSSHKey() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:         schema.TypeString,
+				Required:     true,
+				ValidateFunc: validation.NoZeroValues,
 			},
 			"public_key": {
 				Type:             schema.TypeString,

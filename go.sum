@@ -180,10 +180,8 @@ github.com/posener/complete v1.2.1/go.mod h1:6gapUrK/U1TAN7ciCoNRIdVC5sbdBTUh1DK
 github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4/go.mod h1:xMI15A0UPsDsEKsMN9yxemIoYk6Tm2C1GtYGdfGttqA=
 github.com/sergi/go-diff v1.0.0 h1:Kpca3qRNrduNnOQeazBd0ysaKrUJiIuISHxogkT9RPQ=
 github.com/sergi/go-diff v1.0.0/go.mod h1:0CfEIISq7TuYL3j771MWULgwwjU+GofnZX9QAmXWZgo=
-github.com/serverscom/serverscom-go-client v0.0.0-20200508171328-a32085fadb3d h1:jnzanwmhZ2zR/xpKmgFmE9einsmV+3vKt2c2PcOK16M=
-github.com/serverscom/serverscom-go-client v0.0.0-20200508171328-a32085fadb3d/go.mod h1:QjA/wiNIxysEv8EjSdrpJj6v+q8EFs15dv8/dJmW19k=
-github.com/serverscom/serverscom-go-client v0.0.0-20200615162047-062ef864d968 h1:fDYYgObZkuin2/YoQ1gFDHyYlisSiNzJFBWzON95OeY=
-github.com/serverscom/serverscom-go-client v0.0.0-20200615162047-062ef864d968/go.mod h1:QjA/wiNIxysEv8EjSdrpJj6v+q8EFs15dv8/dJmW19k=
+github.com/serverscom/serverscom-go-client v0.0.0-20200616165100-d50ebc16e19c h1:AADqkNJCI7VapZgZmB5Pom5WKG6EVpiRwWDhTxMqTd8=
+github.com/serverscom/serverscom-go-client v0.0.0-20200616165100-d50ebc16e19c/go.mod h1:QjA/wiNIxysEv8EjSdrpJj6v+q8EFs15dv8/dJmW19k=
 github.com/spf13/afero v1.2.2 h1:5jhuqJyZCZf2JRofRvN/nIFgIWNzPa3/Vz8mYylgbWc=
 github.com/spf13/afero v1.2.2/go.mod h1:9ZxEEn6pIJ8Rxe320qSDBk6AsU0r9pR7Q4OcevTdifk=
 github.com/spf13/pflag v1.0.2/go.mod h1:DYY7MBk1bdzusC3SYhjObp+wFpr4gzcvqqNjLnInEg4=

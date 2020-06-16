@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	scgo "github.com/serverscom/serverscom-go-client/pkg"
 )
 
@@ -26,20 +27,27 @@ func resourceServerscomCloudComputingInstance() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:         schema.TypeString,
+				Required:     true,
+				ValidateFunc: validation.NoZeroValues,
 			},
 			"region": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:             schema.TypeString,
+				Required:         true,
+				DiffSuppressFunc: compareStrings,
+				ValidateFunc:     validation.NoZeroValues,
 			},
 			"image": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:             schema.TypeString,
+				Required:         true,
+				DiffSuppressFunc: compareStrings,
+				ValidateFunc:     validation.NoZeroValues,
 			},
 			"flavor": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:             schema.TypeString,
+				Required:         true,
+				DiffSuppressFunc: compareStrings,
+				ValidateFunc:     validation.NoZeroValues,
 			},
 			"gpn_enabled": {
 				Type:     schema.TypeBool,
@@ -52,9 +60,10 @@ func resourceServerscomCloudComputingInstance() *schema.Resource {
 				Default:  false,
 			},
 			"backup_copies": {
-				Type:     schema.TypeInt,
-				Optional: true,
-				Default:  0,
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Default:      0,
+				ValidateFunc: validation.IntAtLeast(0),
 			},
 			"ssh_key_fingerprint": {
 				Type:     schema.TypeString,
@@ -293,7 +302,7 @@ func getRegion(code string) (*scgo.CloudComputingRegion, error) {
 	}
 
 	for _, region := range regions {
-		if region.Code == code {
+		if normalizeString(region.Code) == normalizeString(code) {
 			return &region, nil
 		}
 	}
@@ -308,7 +317,7 @@ func getFlavor(regionID int64, name string) (*scgo.CloudComputingFlavor, error) 
 	}
 
 	for _, flavor := range flavors {
-		if flavor.Name == name {
+		if normalizeString(flavor.Name) == normalizeString(name) {
 			return &flavor, nil
 		}
 	}
@@ -323,7 +332,7 @@ func getImage(regionID int64, name string) (*scgo.CloudComputingImage, error) {
 	}
 
 	for _, image := range images {
-		if image.Name == name {
+		if normalizeString(image.Name) == normalizeString(name) {
 			return &image, nil
 		}
 	}

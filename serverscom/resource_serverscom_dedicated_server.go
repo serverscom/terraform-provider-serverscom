@@ -43,37 +43,42 @@ func resourceServerscomDedicatedServer() *schema.Resource {
 				ValidateFunc: validation.NoZeroValues,
 			},
 			"location": {
-				Type:         schema.TypeString,
-				Required:     true,
-				ForceNew:     true,
-				ValidateFunc: validation.NoZeroValues,
+				Type:             schema.TypeString,
+				Required:         true,
+				ForceNew:         true,
+				DiffSuppressFunc: compareStrings,
+				ValidateFunc:     validation.NoZeroValues,
 			},
 			"server_model": {
-				Type:         schema.TypeString,
-				Required:     true,
-				ForceNew:     true,
-				ValidateFunc: validation.NoZeroValues,
+				Type:             schema.TypeString,
+				Required:         true,
+				ForceNew:         true,
+				DiffSuppressFunc: compareStrings,
+				ValidateFunc:     validation.NoZeroValues,
 			},
 			"ram_size": {
 				Type:     schema.TypeInt,
 				Optional: true,
 			},
 			"operating_system": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: compareStrings,
 			},
 			"public_uplink": {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
 			"private_uplink": {
-				Type:         schema.TypeString,
-				Required:     true,
-				ValidateFunc: validation.NoZeroValues,
+				Type:             schema.TypeString,
+				Required:         true,
+				DiffSuppressFunc: compareStrings,
+				ValidateFunc:     validation.NoZeroValues,
 			},
 			"bandwidth": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: compareStrings,
 			},
 			"slot": {
 				Type:     schema.TypeList,
@@ -81,12 +86,14 @@ func resourceServerscomDedicatedServer() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"position": {
-							Type:     schema.TypeInt,
-							Required: true,
+							Type:         schema.TypeInt,
+							Required:     true,
+							ValidateFunc: validation.IntAtLeast(0),
 						},
 						"drive_model": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:             schema.TypeString,
+							Optional:         true,
+							DiffSuppressFunc: compareStrings,
 						},
 					},
 				},
@@ -103,9 +110,10 @@ func resourceServerscomDedicatedServer() *schema.Resource {
 							Elem:     &schema.Schema{Type: schema.TypeInt},
 						},
 						"raid": {
-							Type:     schema.TypeInt,
-							Default:  0,
-							Optional: true,
+							Type:         schema.TypeInt,
+							Default:      0,
+							Optional:     true,
+							ValidateFunc: validation.IntInSlice([]int{0, 1, 5, 6, 10, 50, 60}),
 						},
 						"partition": {
 							Type:     schema.TypeList,
@@ -235,7 +243,7 @@ func resourceServerscomDedicatedServerRead(d *schema.ResourceData, meta interfac
 }
 
 func resourceServerscomDedicatedServerUpdate(d *schema.ResourceData, meta interface{}) error {
-	return nil
+	return resourceServerscomDedicatedServerRead(d, meta)
 }
 
 func resourceServerscomDedicatedServerDelete(d *schema.ResourceData, meta interface{}) error {
@@ -432,7 +440,7 @@ func getLocation(code string) (*scgo.Location, error) {
 	}
 
 	for _, loc := range locations {
-		if loc.Code == code {
+		if normalizeString(loc.Code) == normalizeString(code) {
 			return &loc, nil
 		}
 	}
@@ -447,7 +455,7 @@ func getServerModel(locationID int64, name string) (*scgo.ServerModelOption, err
 	}
 
 	for _, sm := range serverModels {
-		if sm.Name == name {
+		if normalizeString(sm.Name) == normalizeString(name) {
 			return &sm, nil
 		}
 	}
@@ -462,7 +470,7 @@ func getDriveModel(locationID int64, serverModelID int64, name string) (*scgo.Dr
 	}
 
 	for _, dm := range driveModels {
-		if dm.Name == name {
+		if normalizeString(dm.Name) == normalizeString(name) {
 			return &dm, nil
 		}
 	}
@@ -479,7 +487,7 @@ func getOperatingSystem(locationID int64, serverModelID int64, name string) (*sc
 	for _, os := range operatingSystems {
 		fullName := fmt.Sprintf("%s %s %s", os.Name, os.Version, os.Arch)
 
-		if fullName == name {
+		if normalizeString(fullName) == normalizeString(name) {
 			return &os, nil
 		}
 	}
@@ -494,7 +502,7 @@ func getUplink(locationID int64, serverModelID int64, name string) (*scgo.Uplink
 	}
 
 	for _, uplink := range uplinks {
-		if name == uplink.Name {
+		if normalizeString(name) == normalizeString(uplink.Name) {
 			return &uplink, nil
 		}
 	}
@@ -509,7 +517,7 @@ func getBandwidth(locationID int64, serverModelID int64, uplinkModelID int64, na
 	}
 
 	for _, bandwidth := range bandwidthList {
-		if name == bandwidth.Name {
+		if normalizeString(name) == normalizeString(bandwidth.Name) {
 			return &bandwidth, nil
 		}
 	}
