@@ -76,9 +76,9 @@ The following arguments are supported:
 - `bandwidth` - (Optional, string) The dedicated server public bandwidth name.
 - `ssh_key_fingerprints.0` - (Optional, string) SSH key fingerprint.
 - `ipv6` - (Optional, bool) Is IPv6 enabled. Defaults to `false`.
-- `slots` - (Optional, list) List of drive slots.
-- `slots.0.position` - (Required, int) The slot position.
-- `slots.0.drive_model_name` - (Optional, string) The name of drive model to place in the slot.
+- `slot` - (Optional, list) List of drive slots.
+- `slot.0.position` - (Required, int) The slot position.
+- `slot.0.drive_model_name` - (Optional, string) The name of drive model to place in the slot.
 - `layout` - (Optional, list) List of layouts.
 - `layout.0.slot_positions` - (Required, list) List of slots which should be used by the layout.
 - `layout.0.raid` - (Optional, int) RAID level for the layout.
