@@ -1,35 +1,34 @@
----
-layout: "serverscom"
-page_title: "Servers.com: serverscom_cloud_computing_instance"
-sidebar_current: "docs-serverscom-resource-cloud-computing-instance"
-description: |-
-  Provides an Servers.com cloud computing instance resource. This can be used to create, modify, and delete cloud computing instances. Cloud computing instances also support provisioning.
----
+.. _resource_serverscom_cloud_computing_instance:
 
-# serverscom_cloud_computing_instance
+Cloud computing instance
+========================
 
-Provides an Servers.com cloud computing instance resource. This can be used to create, modify, and delete cloud computing instances. Cloud computing instances also support provisioning [provisioning](https://www.terraform.io/docs/provisioners/index.html).
+Provides an Servers.com cloud computing instance resource. This can be used to create, modify, and delete cloud computing instances. Cloud computing instances also support `provisioning <https://www.terraform.io/docs/provisioners/index.html>`_.
 
-## Example Usage
+Example
+*******
 
-```hcl
-# Create a new cloud computing instance
-resource "serverscom_cloud_computing_instance" "instance_1" {
-  name = "instance-1"
-  region = "NL01"
-  image = "Ubuntu 20.04-server (64 bit)"
+Create a new cloud computing instance
 
-  flavor = "SSD.50"
+.. sourcecode:: terraform
 
-  gpn_enabled = true
-  ipv6_enabled = true
-  backup_copies = 5
+  resource "serverscom_cloud_computing_instance" "instance_1" {
+    name = "instance-1"
+    region = "NL01"
+    image = "Ubuntu 20.04-server (64 bit)"
 
-  ssh_key_fingerprint = "cf:1d:09:ab:cb:47:97:3f:50:9a:f0:34:14:78:fa:1b"
-}
-```
+    flavor = "SSD.50"
 
-## Argument Reference
+    gpn_enabled = true
+    ipv6_enabled = true
+    backup_copies = 5
+
+    ssh_key_fingerprint = "cf:1d:09:ab:cb:47:97:3f:50:9a:f0:34:14:78:fa:1b"
+  }
+
+
+Argument Reference
+******************
 
 The following arguments are supported:
 
@@ -42,7 +41,8 @@ The following arguments are supported:
 - `backup_copies` - (Optional, int) Count of backup copies. Defaults to `0`.
 - `ssh_key_fingerprint` - (Optional, string) SSH key fingerprint.
 
-## Attributes Reference
+Attributes Reference
+********************
 
 The following attributes are exported:
 
@@ -60,10 +60,13 @@ The following attributes are exported:
 - `public_ipv6_address` - (string) Public IPv6 address.
 - `openstack_uuid` - (string) Unique OpenStack UUID of the cloud computing instance
 
-## Import
+Import
+******
 
 Cloud computing instances can be imported using the cloud computing instance `id`:
 
-```
-terraform import serverscom_cloud_computing_instance.instance_1 <id>
-```
+.. sourcecode:: bash
+
+   terraform import serverscom_cloud_computing_instance.instance_1 <id>
+
+.. vi: textwidth=78
