@@ -48,9 +48,10 @@ func resourceServerscomL2Segment() *schema.Resource {
 				ValidateFunc: validation.StringInSlice([]string{"private", "public"}, false),
 			},
 			"location_group": {
-				Type:         schema.TypeString,
-				Required:     true,
-				ValidateFunc: validation.NoZeroValues,
+				Type:             schema.TypeString,
+				Required:         true,
+				ValidateFunc:     validation.NoZeroValues,
+				DiffSuppressFunc: compareStrings,
 			},
 			"member": {
 				Type:     schema.TypeSet,
@@ -323,7 +324,7 @@ func getLocationGroup(groupType string, groupCode string) (*scgo.L2LocationGroup
 	}
 
 	for _, locationGroup := range locationGroups {
-		if locationGroup.GroupType == groupType && locationGroup.Code == groupCode {
+		if locationGroup.GroupType == groupType && normalizeString(locationGroup.Code) == normalizeString(groupCode) {
 			return &locationGroup, nil
 		}
 	}

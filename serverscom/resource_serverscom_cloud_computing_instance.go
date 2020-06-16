@@ -32,19 +32,22 @@ func resourceServerscomCloudComputingInstance() *schema.Resource {
 				ValidateFunc: validation.NoZeroValues,
 			},
 			"region": {
-				Type:         schema.TypeString,
-				Required:     true,
-				ValidateFunc: validation.NoZeroValues,
+				Type:             schema.TypeString,
+				Required:         true,
+				DiffSuppressFunc: compareStrings,
+				ValidateFunc:     validation.NoZeroValues,
 			},
 			"image": {
-				Type:         schema.TypeString,
-				Required:     true,
-				ValidateFunc: validation.NoZeroValues,
+				Type:             schema.TypeString,
+				Required:         true,
+				DiffSuppressFunc: compareStrings,
+				ValidateFunc:     validation.NoZeroValues,
 			},
 			"flavor": {
-				Type:         schema.TypeString,
-				Required:     true,
-				ValidateFunc: validation.NoZeroValues,
+				Type:             schema.TypeString,
+				Required:         true,
+				DiffSuppressFunc: compareStrings,
+				ValidateFunc:     validation.NoZeroValues,
 			},
 			"gpn_enabled": {
 				Type:     schema.TypeBool,
@@ -299,7 +302,7 @@ func getRegion(code string) (*scgo.CloudComputingRegion, error) {
 	}
 
 	for _, region := range regions {
-		if region.Code == code {
+		if normalizeString(region.Code) == normalizeString(code) {
 			return &region, nil
 		}
 	}
@@ -314,7 +317,7 @@ func getFlavor(regionID int64, name string) (*scgo.CloudComputingFlavor, error) 
 	}
 
 	for _, flavor := range flavors {
-		if flavor.Name == name {
+		if normalizeString(flavor.Name) == normalizeString(name) {
 			return &flavor, nil
 		}
 	}
@@ -329,7 +332,7 @@ func getImage(regionID int64, name string) (*scgo.CloudComputingImage, error) {
 	}
 
 	for _, image := range images {
-		if image.Name == name {
+		if normalizeString(image.Name) == normalizeString(name) {
 			return &image, nil
 		}
 	}
