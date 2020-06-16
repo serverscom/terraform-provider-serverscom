@@ -13,7 +13,7 @@ Provides an Servers.com l2 segment resource. This can be used to create, modify,
 ## Example Usage
 
 ```hcl
-# Create a new dedicated server running ubuntu
+# Create a new l2 segment
 resource "serverscom_l2_segment" "segment_1" {
   name = "l2-segment-1"
   type = "private"
@@ -61,3 +61,11 @@ The following attributes are exported:
 - `status` - (string) Status of the l2 segment.
 - `created_at` - (string) L2 segment created at.
 - `updated_at` - (string) L2 segment updated at.
+
+## Import
+
+L2 Segments can be imported using the l2 segment `id`:
+
+```
+terraform import serverscom_l2_segment.segment_1 <id>
+```

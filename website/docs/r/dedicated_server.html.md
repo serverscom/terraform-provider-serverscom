@@ -110,3 +110,11 @@ The following attributes are exported:
 - `slots` - (list) List of drive slots in the dedicated server.
 - `slots.0.position` - (int) The slot position.
 - `slots.0.drive_model_name` - (string) The name of drive model.
+
+## Import
+
+Dedicated servers can be imported using the dedicated server `id`:
+
+```
+terraform import serverscom_dedicated_server.node_1 <id>
+```

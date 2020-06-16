@@ -35,3 +35,12 @@ The following attributes are exported:
 - `name` - (string) The name of the SSH key
 - `public_key` - (string) The text of the public key
 - `fingerprint` - (string) The fingerprint of the SSH key
+
+
+## Import
+
+SSH keys can be imported using the SSH key `fingeprint`:
+
+```
+terraform import serverscom_ssh_key.default <fingerprint>
+```

@@ -18,6 +18,9 @@ func resourceServerscomCloudComputingInstance() *schema.Resource {
 		Update: resourceServerscomCloudComputingInstanceUpdate,
 		Delete: resourceServerscomCloudComputingInstanceDelete,
 		Create: resourceServerscomCloudComputingInstanceCreate,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 
 		SchemaVersion: 1,
 
