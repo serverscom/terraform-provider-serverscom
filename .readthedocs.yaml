@@ -2,7 +2,9 @@ version: 2
 
 formats: all
 
+sphinx:
+  configuration: docs/conf.py
+
 python:
-    install:
-        - requirements: doc-requirements.txt
-        - path: .
+  install:
+    - requirements: doc-requirements.txt
