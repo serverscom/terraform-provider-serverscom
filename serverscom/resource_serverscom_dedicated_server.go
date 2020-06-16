@@ -81,8 +81,9 @@ func resourceServerscomDedicatedServer() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"position": {
-							Type:     schema.TypeInt,
-							Required: true,
+							Type:         schema.TypeInt,
+							Required:     true,
+							ValidateFunc: validation.IntAtLeast(0),
 						},
 						"drive_model": {
 							Type:     schema.TypeString,
@@ -103,9 +104,10 @@ func resourceServerscomDedicatedServer() *schema.Resource {
 							Elem:     &schema.Schema{Type: schema.TypeInt},
 						},
 						"raid": {
-							Type:     schema.TypeInt,
-							Default:  0,
-							Optional: true,
+							Type:         schema.TypeInt,
+							Default:      0,
+							Optional:     true,
+							ValidateFunc: validation.IntInSlice([]int{0, 1, 5, 6, 10, 50, 60}),
 						},
 						"partition": {
 							Type:     schema.TypeList,
