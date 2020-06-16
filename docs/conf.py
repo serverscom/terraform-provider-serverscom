@@ -34,6 +34,7 @@ extensions = [
 ]
 
 source_suffix = '.rst'
+master_doc = 'index'
 show_authors = False
 highlight_language = 'hcl'
 
