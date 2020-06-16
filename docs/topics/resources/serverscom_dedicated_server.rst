@@ -30,6 +30,11 @@ Create a new dedicated server:
 
     ipv6 = true
 
+    slot {
+      drive_model = "480 GB SSD SATA"
+      position    = 0
+    }
+
     layout {
       slot_positions = [0]
 
