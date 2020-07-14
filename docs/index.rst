@@ -7,10 +7,18 @@ Terraform provider serverscom's documentation!
 =========================================================
 
 .. toctree::
+   :titlesonly:
+   :hidden:
+   :caption: Getting started
+
+   topics/introduction.rst
+
+.. toctree::
    :hidden:
    :titlesonly:
    :caption: Definitions
 
+   topics/provider.rst
    topics/resources.rst
 
 .. vi: textwidth=79

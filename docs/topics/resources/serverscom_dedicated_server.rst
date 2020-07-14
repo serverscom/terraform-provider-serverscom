@@ -1,9 +1,9 @@
 .. _resource_serverscom_dedicated_server:
 
-Dedicated Server
+Dedicated server
 ================
 
-Provides an Servers.com dedicated server resource. This can be used to create, modify, and delete servers. Servers also support `provisioning <https://www.terraform.io/docs/provisioners/index.html>`_.
+Provides a Servers.com dedicated server resource. This can be used to create, modify, and delete servers. Servers also support `provisioning <https://www.terraform.io/docs/provisioners/index.html>`_.
 
 Example
 *******
@@ -66,9 +66,9 @@ Argument Reference
 
 The following arguments are supported:
 
-- `hostname` - (Required, string) Name of the dedicated server to create (must be a valid hostname as per RFC 1123).
-- `location` - (Required, string) The location code to create the dedicated server in. `AMS1`, `SJC1`, etc.
-- `server_model` - (Required, string) Name of the server model the dedicated server is created from.
+- `hostname` - (Required, string) Name of the dedicated server (according to RFC 1123 specification).
+- `location` - (Required, string) Location code of the dedicated server. For example: `AMS1`, `SJC1`, etc.
+- `server_model` - (Required, string) Name of the dedicated server model.
 - `ram_size` - (Optional, int) Size of the RAM (GB).
 - `operating_system` - (Optional, string) The dedicated server operating system name.
 - `private_uplink` - (Required, string) The dedicated server private uplink name.
@@ -77,14 +77,14 @@ The following arguments are supported:
 - `ssh_key_fingerprints.0` - (Optional, string) SSH key fingerprint.
 - `ipv6` - (Optional, bool) Is IPv6 enabled. Defaults to `false`.
 - `slot` - (Optional, list) List of drive slots.
-- `slot.0.position` - (Required, int) The slot position.
+- `slot.0.position` - (Required, int) Slot position.
 - `slot.0.drive_model_name` - (Optional, string) The name of drive model to place in the slot.
 - `layout` - (Optional, list) List of layouts.
-- `layout.0.slot_positions` - (Required, list) List of slots which should be used by the layout.
+- `layout.0.slot_positions` - (Required, list) List of slots which should be used in the layout.
 - `layout.0.raid` - (Optional, int) RAID level for the layout.
 - `layout.0.partition` - (Required, list) List of partitions for the layout.
-- `layout.0.partition.0.target` - (Required, string) Target/Mountoint for the partition.
-- `layout.0.partition.0.size` - (Required, int) Size of partition (MB).
+- `layout.0.partition.0.target` - (Required, string) Target/Mount point for the partition.
+- `layout.0.partition.0.size` - (Required, int) Size of the partition (MB).
 - `layout.0.partition.0.fill` - (Optional, bool) Autofill partition by all unused space. When set to `true`, the size will be ignored.
 - `layout.0.partition.0.fs` - (Optional, string) Filesystem for the partition.
 
@@ -93,22 +93,22 @@ Attributes Reference
 
 The following attributes are exported:
 
-- `id` - (string) Unique ID of the dedicated server.
+- `id` - (string) Unique identifier of the dedicated server.
 - `hostname` - (string) Name of the dedicated server.
-- `location` - (string) The location code.
+- `location` - (string) Location code of the dedicated server. For example: `AMS1`, `SJC1`, etc.
 - `server_model` - (string) Name of the server model.
 - `ram_size` - (int) Size of the RAM (GB).
 - `operating_system` - (string) The dedicated server operating system name.
 - `private_uplink` - (string) The dedicated server private uplink name.
 - `public_uplink` - (string) The dedicated server public uplink name.
 - `bandwidth` - (string) The dedicated server public bandwidth name.
-- `status` - (string) The status of the dedicated server.
+- `status` - (string) Status of the dedicated server.
 - `private_ipv4_address` - (string) The private IPv4 address.
 - `public_ipv4_address` - (string) The public IPv4 address.
 - `configuration` - (string) The current configuration name of the dedicated server.
 - `slots` - (list) List of drive slots in the dedicated server.
-- `slots.0.position` - (int) The slot position.
-- `slots.0.drive_model_name` - (string) The name of drive model.
+- `slots.0.position` - (int) Slot position.
+- `slots.0.drive_model_name` - (string) Name of drive model.
 
 Import
 ******
