@@ -67,7 +67,7 @@ func resourceServerscomCloudComputingInstance() *schema.Resource {
 			},
 			"ssh_key_fingerprint": {
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
 			},
 			"status": {
 				Type:     schema.TypeString,
