@@ -2,6 +2,7 @@ Terraform Provider
 ==================
 
 - Website: https://www.terraform.io
+- [![Documentation Status](https://readthedocs.org/projects/terraform-provider-serverscom/badge/?version=latest)](https://terraform-provider-serverscom.readthedocs.io/en/latest/?badge=latest)
 - [![Gitter chat](https://badges.gitter.im/hashicorp-terraform/Lobby.png)](https://gitter.im/hashicorp-terraform/Lobby)
 - Mailing list: [Google Groups](http://groups.google.com/group/terraform-tool)
 
@@ -34,7 +35,7 @@ $ make build
 Using the provider
 ----------------------
 
-TODO
+[Setup guide](https://terraform-provider-serverscom.readthedocs.io/en/latest/topics/introduction.html)
 
 Developing the Provider
 ---------------------------
