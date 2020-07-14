@@ -24,17 +24,17 @@ Argument Reference
 The following arguments are supported:
 
 - `name` - (Required, string) Name of the SSH key.
-- `public_key` - (Required, string) The public key. If this is a file, it can be read using the file interpolation function
+- `public_key` - (Required, string) Public key. If this is a file, it can be read using the file interpolation function.
 
 Attributes Reference
 ********************
 
 The following attributes are exported:
 
-- `id` - (int) The unique ID of the key.
-- `name` - (string) The name of the SSH key
-- `public_key` - (string) The text of the public key
-- `fingerprint` - (string) The fingerprint of the SSH key
+- `id` - (int) Unique identifier of the SSH key.
+- `name` - (string) Name of the SSH key.
+- `public_key` - (string) Public part of the SSH key.
+- `fingerprint` - (string) Fingerprint of the SSH key.
 
 
 Import
