@@ -32,7 +32,7 @@ Argument Reference
 
 The following arguments are supported:
 
-- `name` - (Required, string) Name of the cloud instance to create (must be a valid hostname as per RFC 1123).
+- `name` - (Required, string) Name of the cloud instance (according to RFC 1123 specification).
 - `region` - (Required, string) Cloud computing region code.
 - `image` - (Required, string) Name of the image.
 - `flavor` - (Required, string) Name of the flavor.
@@ -46,8 +46,8 @@ Attributes Reference
 
 The following attributes are exported:
 
-- `id` - (string) Unique ID of the cloud computing instance.
-- `name` - (string) Name of the cloud instance to create (must be a valid hostname as per RFC 1123).
+- `id` - (string) Unique identifier of the cloud computing instance.
+- `name` - (string) Name of the cloud instance (according to RFC 1123 specification).
 - `region` - (string) Cloud computing region code.
 - `image` - (string) Name of the image.
 - `flavor` - (string) Name of the flavor.
@@ -58,7 +58,7 @@ The following attributes are exported:
 - `private_ipv4_address` - (string) Private IPv4 address.
 - `public_ipv4_address` - (string) Public IPv4 address.
 - `public_ipv6_address` - (string) Public IPv6 address.
-- `openstack_uuid` - (string) Unique OpenStack UUID of the cloud computing instance
+- `openstack_uuid` - (string) OpenStack unique identifier (UUID) of the cloud computing instance.
 
 Import
 ******
