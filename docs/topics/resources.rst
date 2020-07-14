@@ -6,7 +6,7 @@ Resources
 List of resources
 
 Available Resources
-===============
+===================
 
 The following list contains a description of the resources:
 

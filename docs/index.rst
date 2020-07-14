@@ -15,10 +15,10 @@ Terraform provider serverscom's documentation!
 
 .. toctree::
    :hidden:
-   :titlesonly:   
+   :titlesonly:
    :caption: Definitions
 
-   topics/scprovider.rst
+   topics/provider.rst
    topics/resources.rst
 
 .. vi: textwidth=79

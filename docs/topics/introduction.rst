@@ -1,7 +1,7 @@
 .. _introduction:
 
 Setup guide
-*********
+***********
 
 This guide will help you to set up Servers.com as a Terraform provider. Follow the steps described below to create the correct provider's configuration and run it in a proper way.
 
@@ -16,9 +16,10 @@ This guide will help you to set up Servers.com as a Terraform provider. Follow t
  .. sourcecode:: terraform
 
    provider "serverscom" {
-   token = "<your API token>"
-   endpoint = "https://api.servers.com/v1"
+     token = "<your API token>"
+     endpoint = "https://api.servers.com/v1"
    }
+
  To see a description of the attributes, go to Servers.com Provider section.
 
 5) Download Servers.com provider binary from `this repository <https://github.com/serverscom/terraform-provider-serverscom/releases>`_. Choose an appropriate archive by its name according to your operating system. All the files are named this way: ``terraform-provider-serverscom-<version X.Y.Z>-<Operating system>-<Architecture>``
@@ -26,6 +27,7 @@ This guide will help you to set up Servers.com as a Terraform provider. Follow t
  For example: ``terraform-provider-serverscom-v0.1.1-windows-amd64.zip``
 
 6) Extract the archive in the following directory (it depends on an operating system):
+
  - for Windows: ``%APPDATA%\terraform.d\plugins\windows_amd64``
  - for Linux: ``~/.terraform.d/plugins/linux_amd64``
  - for MacOS: ``~/.terraform.d/plugins/darwin_amd64``
