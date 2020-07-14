@@ -3,12 +3,12 @@
 Resources
 *********
 
-List of resource
+List of resources
 
-Known Resources
+Available Resources
 ===============
 
-The following is a list of documents for each supported resource:
+The following list contains a description of the resources:
 
 .. toctree::
    :titlesonly:
