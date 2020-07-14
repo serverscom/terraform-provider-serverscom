@@ -227,8 +227,10 @@ func resourceServerscomCloudComputingInstanceCreate(d *schema.ResourceData, meta
 		input.BackupCopies = &backupCopies
 	}
 
-	sshKeyFp := d.Get("ssh_key_fingerprint").(string)
-	input.SSHKeyFingerprint = &sshKeyFp
+	if v, ok := d.GetOk("ssh_key_fingerprint"); ok {
+		sshKeyFp := v.(string)
+		input.SSHKeyFingerprint = &sshKeyFp
+	}
 
 	ctx := context.TODO()
 
