@@ -2,7 +2,7 @@ Terraform Provider
 ==================
 
 - Website: https://www.terraform.io
-- [![Documentation Status](https://readthedocs.org/projects/terraform-provider-serverscom/badge/?version=latest)](https://terraform-provider-serverscom.readthedocs.io/en/latest/?badge=latest)
+- [Documentation](https://registry.terraform.io/providers/serverscom/serverscom/latest/docs)
 - [![Gitter chat](https://badges.gitter.im/hashicorp-terraform/Lobby.png)](https://gitter.im/hashicorp-terraform/Lobby)
 - Mailing list: [Google Groups](http://groups.google.com/group/terraform-tool)
 
