@@ -1,34 +1,32 @@
-.. _resource_serverscom_cloud_computing_instance:
+---
+page_title: "Servers.com: serverscom_cloud_computing_instance"
+---
 
-Cloud computing instance
-========================
+# serverscom_cloud_computing_instance
 
-Provides an Servers.com cloud computing instance resource. This can be used to create, modify, and delete cloud computing instances. Cloud computing instances also support `provisioning <https://www.terraform.io/docs/provisioners/index.html>`_.
+Provides an Servers.com cloud computing instance resource. This can be used to create, modify, and delete cloud computing instances. Cloud computing instances also support [provisioning](https://www.terraform.io/docs/provisioners/index.html).
 
-Example
-*******
+## Example Usage
 
 Create a new cloud computing instance
 
-.. sourcecode:: terraform
+``` terraform
+resource "serverscom_cloud_computing_instance" "instance_1" {
+  name = "instance-1"
+  region = "NL01"
+  image = "Ubuntu 20.04-server (64 bit)"
 
-  resource "serverscom_cloud_computing_instance" "instance_1" {
-    name = "instance-1"
-    region = "NL01"
-    image = "Ubuntu 20.04-server (64 bit)"
+  flavor = "SSD.50"
 
-    flavor = "SSD.50"
+  gpn_enabled = true
+  ipv6_enabled = true
+  backup_copies = 5
 
-    gpn_enabled = true
-    ipv6_enabled = true
-    backup_copies = 5
+  ssh_key_fingerprint = "cf:1d:09:ab:cb:47:97:3f:50:9a:f0:34:14:78:fa:1b"
+}
+```
 
-    ssh_key_fingerprint = "cf:1d:09:ab:cb:47:97:3f:50:9a:f0:34:14:78:fa:1b"
-  }
-
-
-Argument Reference
-******************
+## Argument Reference
 
 The following arguments are supported:
 
@@ -41,8 +39,7 @@ The following arguments are supported:
 - `backup_copies` - (Optional, int) Count of backup copies. Defaults to `0`.
 - `ssh_key_fingerprint` - (Optional, string) SSH key fingerprint.
 
-Attributes Reference
-********************
+## Attributes Reference
 
 The following attributes are exported:
 
@@ -60,13 +57,11 @@ The following attributes are exported:
 - `public_ipv6_address` - (string) Public IPv6 address.
 - `openstack_uuid` - (string) OpenStack unique identifier (UUID) of the cloud computing instance.
 
-Import
-******
+## Import
 
-Cloud computing instances can be imported using the cloud computing instance `id`:
+Cloud computing instances can be imported using the cloud computing
+instance `id`:
 
-.. sourcecode:: bash
-
-   terraform import serverscom_cloud_computing_instance.instance_1 <id>
-
-.. vi: textwidth=78
+``` bash
+terraform import serverscom_cloud_computing_instance.instance_1 <id>
+```

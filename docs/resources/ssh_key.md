@@ -1,33 +1,30 @@
-.. _resource_serverscom_ssh_key:
+---
+page_title: "Servers.com: serverscom_ssh_key"
+---
 
-SSH Key
-=======
+# serverscom_ssh_key
 
 Provides a Servers.com SSH key resource to manage SSH keys for dedicated server/cloud computing instance access.
 
-Example
-*******
+## Example Usage
 
 Create a new SSH key
 
-.. sourcecode:: terraform
+```terraform
+resource "serverscom_ssh_key" "default" {
+  name = "Terraform Example"
+  public_key = "${file("~/.ssh/id_rsa.pub")}"
+}
+```
 
-  resource "serverscom_ssh_key" "default" {
-    name = "Terraform Example"
-    public_key = "${file("~/.ssh/id_rsa.pub")}"
-  }
-
-
-Argument Reference
-******************
+## Argument Reference
 
 The following arguments are supported:
 
 - `name` - (Required, string) Name of the SSH key.
 - `public_key` - (Required, string) Public key. If this is a file, it can be read using the file interpolation function.
 
-Attributes Reference
-********************
+## Attributes Reference
 
 The following attributes are exported:
 
@@ -36,14 +33,11 @@ The following attributes are exported:
 - `public_key` - (string) Public part of the SSH key.
 - `fingerprint` - (string) Fingerprint of the SSH key.
 
-
-Import
-******
+## Import
 
 SSH keys can be imported using the SSH key `fingeprint`:
 
-.. sourcecode:: bash
+```bash
+terraform import serverscom_ssh_key.default <fingerprint>
+```
 
-        terraform import serverscom_ssh_key.default <fingerprint>
-
-.. vi: textwidth=78

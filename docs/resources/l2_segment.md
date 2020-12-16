@@ -1,35 +1,34 @@
-.. _resource_serverscom_l2_segment:
+---
+page_title: "Servers.com: serverscom_l2_segment"
+---
 
-L2 Segment
-==========
+# serverscom_l2_segment
 
 Provides an Servers.com l2 segment resource. This can be used to create, modify, and delete L2 segments.
 
-Example
-*******
+## Example Usage
 
 Create a new L2 segment
 
-.. sourcecode:: terraform
+``` terraform
+resource "serverscom_l2_segment" "segment_1" {
+  name = "l2-segment-1"
+  type = "private"
+  location_group = "SJC1"
 
-  resource "serverscom_l2_segment" "segment_1" {
-    name = "l2-segment-1"
-    type = "private"
-    location_group = "SJC1"
-
-    member {
-      id = "QBeXDWey"
-      mode = "native"
-    }
-
-    member {
-      id = "4QbYEKbz"
-      mode = "native"
-    }
+  member {
+    id = "QBeXDWey"
+    mode = "native"
   }
 
-Argument Reference
-******************
+  member {
+    id = "4QbYEKbz"
+    mode = "native"
+  }
+}
+```
+
+## Argument Reference
 
 The following arguments are supported:
 
@@ -40,8 +39,7 @@ The following arguments are supported:
 - `member.0.id` - (Required, int) ID of the dedicated server.
 - `member.0.mode` - (Required, string) Membership mode of the dedicated server.
 
-Attributes Reference
-********************
+## Attributes Reference
 
 The following attributes are exported:
 
@@ -60,13 +58,10 @@ The following attributes are exported:
 - `created_at` - (string) L2 segment created at.
 - `updated_at` - (string) L2 segment updated at.
 
-Import
-******
+## Import
 
 L2 Segments can be imported using the l2 segment `id`:
 
-.. sourcecode:: bash
-
-  terraform import serverscom_l2_segment.segment_1 <id>
-
-.. vi: textwidth=78
+``` bash
+terraform import serverscom_l2_segment.segment_1 <id>
+```
