@@ -10,7 +10,7 @@ Provides an Servers.com cloud computing instance resource. This can be used to c
 
 Create a new cloud computing instance
 
-``` terraform
+```hcl
 resource "serverscom_cloud_computing_instance" "instance_1" {
   name = "instance-1"
   region = "NL01"
@@ -62,6 +62,6 @@ The following attributes are exported:
 Cloud computing instances can be imported using the cloud computing
 instance `id`:
 
-``` bash
+```bash
 terraform import serverscom_cloud_computing_instance.instance_1 <id>
 ```

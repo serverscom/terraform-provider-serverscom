@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	scgo "github.com/serverscom/serverscom-go-client/pkg"
 )
 
@@ -158,9 +158,17 @@ func resourceServerscomDedicatedServer() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"private_ipv4_network_id": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
 			"private_ipv4_address": {
 				Type:     schema.TypeString,
 				Computed: true,
+				Optional: true,
+			},
+			"public_ipv4_network_id": {
+				Type:     schema.TypeString,
 				Optional: true,
 			},
 			"public_ipv4_address": {
@@ -295,12 +303,29 @@ func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta interf
 	var layouts []scgo.DedicatedServerLayoutInput
 	var dedicatedServers []scgo.DedicatedServer
 
+	var publicIpv4NetworkId *string
+	var privateIpv4NetworkId *string
+
 	var err error
 
 	input := scgo.DedicatedServerCreateInput{}
 
+	if id, ok := d.GetOk("public_ipv4_network_id"); ok {
+		publicIpv4NetworkIdValue := id.(string)
+		publicIpv4NetworkId = &publicIpv4NetworkIdValue
+	}
+
+	if id, ok := d.GetOk("private_ipv4_network_id"); ok {
+		privateIpv4NetworkIdValue := id.(string)
+		privateIpv4NetworkId = &privateIpv4NetworkIdValue
+	}
+
 	input.Hosts = []scgo.DedicatedServerHostInput{
-		scgo.DedicatedServerHostInput{Hostname: d.Get("hostname").(string)},
+		{
+			Hostname:             d.Get("hostname").(string),
+			PublicIPv4NetworkID:  publicIpv4NetworkId,
+			PrivateIPv4NetworkID: privateIpv4NetworkId,
+		},
 	}
 
 	location, err = getLocation(d.Get("location").(string))
@@ -386,6 +411,10 @@ func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta interf
 		input.SSHKeyFingerprints = expandedStringList(val.([]interface{}))
 	}
 
+	if ipv6, ok := d.GetOk("ipv6"); ok {
+		input.IPv6 = ipv6.(bool)
+	}
+
 	ctx := context.TODO()
 
 	dedicatedServers, err = client.Hosts.CreateDedicatedServers(ctx, input)
@@ -395,10 +424,6 @@ func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta interf
 
 	if len(dedicatedServers) == 0 {
 		return fmt.Errorf("Invalid dedicated servers count returned by api")
-	}
-
-	if ipv6, ok := d.GetOk("ipv6"); ok {
-		input.IPv6 = ipv6.(bool)
 	}
 
 	dedicatedServer := dedicatedServers[0]

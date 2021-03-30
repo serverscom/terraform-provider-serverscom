@@ -10,7 +10,7 @@ Provides a Servers.com dedicated server resource. This can be used to create, mo
 
 Create a new dedicated server:
 
-``` terraform
+```hcl
 resource "serverscom_dedicated_server" "node_1" {
   hostname             = "node-1"
   location             = "SJC1"

@@ -1,13 +1,12 @@
 package serverscom
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	scgo "github.com/serverscom/serverscom-go-client/pkg"
 )
 
-func Provider() terraform.ResourceProvider {
-	p := &schema.Provider{
+func Provider() *schema.Provider {
+	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
 			"token": {
 				Type:        schema.TypeString,
@@ -20,16 +19,18 @@ func Provider() terraform.ResourceProvider {
 				DefaultFunc: schema.EnvDefaultFunc("SERVERSCOM_API_URL", "https://api.servers.com"),
 			},
 		},
+		DataSourcesMap: map[string]*schema.Resource{
+			"serverscom_network_pool": datasourceServerscomNetworkPool(),
+		},
 		ResourcesMap: map[string]*schema.Resource{
 			"serverscom_dedicated_server":         resourceServerscomDedicatedServer(),
 			"serverscom_l2_segment":               resourceServerscomL2Segment(),
 			"serverscom_cloud_computing_instance": resourceServerscomCloudComputingInstance(),
 			"serverscom_ssh_key":                  resourceServerscomSSHKey(),
+			"serverscom_subnetwork":               resourceServerscomSubnetwork(),
 		},
 		ConfigureFunc: providerConfigure,
 	}
-
-	return p
 }
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
