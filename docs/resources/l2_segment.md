@@ -10,7 +10,7 @@ Provides an Servers.com l2 segment resource. This can be used to create, modify,
 
 Create a new L2 segment
 
-``` terraform
+```hcl
 resource "serverscom_l2_segment" "segment_1" {
   name = "l2-segment-1"
   type = "private"
@@ -62,6 +62,6 @@ The following attributes are exported:
 
 L2 Segments can be imported using the l2 segment `id`:
 
-``` bash
+```bash
 terraform import serverscom_l2_segment.segment_1 <id>
 ```

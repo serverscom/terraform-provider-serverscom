@@ -10,7 +10,7 @@ Provides a Servers.com SSH key resource to manage SSH keys for dedicated server/
 
 Create a new SSH key
 
-```terraform
+```hcl
 resource "serverscom_ssh_key" "default" {
   name = "Terraform Example"
   public_key = "${file("~/.ssh/id_rsa.pub")}"
