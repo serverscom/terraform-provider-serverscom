@@ -73,6 +73,9 @@ The following arguments are supported:
 - `public_uplink` - (Optional, string) The dedicated server public uplink name.
 - `bandwidth` - (Optional, string) The dedicated server public bandwidth name.
 - `ssh_key_fingerprints.0` - (Optional, string) SSH key fingerprint.
+- `private_ipv4_network_id` - (Optional, string) Private IPv4 network ID.
+- `public_ipv4_network_id` - (Optional, string) Public IPv4 network ID.
+- `user_data` - (Optional, string) A string of the desired user data for the dedicated server.
 - `ipv6` - (Optional, bool) Is IPv6 enabled. Defaults to `false`.
 - `slot` - (Optional, list) List of drive slots.
 - `slot.0.position` - (Required, int) Slot position.
