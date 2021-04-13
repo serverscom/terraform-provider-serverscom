@@ -154,6 +154,16 @@ func resourceServerscomDedicatedServer() *schema.Resource {
 				Optional: true,
 				Default:  false,
 			},
+			"user_data": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				ValidateFunc: validation.NoZeroValues,
+				StateFunc:    HashStringStateFunc(),
+				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+					return new != "" && old == d.Get("user_data")
+				},
+			},
 			"configuration": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -413,6 +423,11 @@ func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta interf
 
 	if ipv6, ok := d.GetOk("ipv6"); ok {
 		input.IPv6 = ipv6.(bool)
+	}
+
+	if userData, ok := d.GetOk("user_data"); ok {
+		userDataValue := userData.(string)
+		input.UserData = &userDataValue
 	}
 
 	ctx := context.TODO()
