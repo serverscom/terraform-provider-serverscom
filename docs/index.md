@@ -28,4 +28,4 @@ resource "serverscom_dedicated_server" "node_1" {
 ## Schema
 
 - `token` (Required, string) - The token used to perform API-requests for Servers.com services, it can be issued in the [Customer Portal](https://portal.servers.com/#/profile/api-tokens).
-- `endpoint` (Optional, string) - The Servers.com API endpoint. In most of cases the default one is used: https://api.servers.com/v1.
+- `endpoint` (Optional, string) - The Servers.com API endpoint. In most of cases the default one is used: `https://api.servers.com/v1`.
