@@ -1,3 +1,7 @@
+---
+page_title: "Servers.com User-data"
+---
+
 # User-data
 
 User-data is a helpful tool to get rid of routine operations after server provisioning. You can get a ready-to-use server with additional software installed and configured according to your specification. The feature is built upon the cloud-init package for Linux operating systems. Cloud-init serves for performing operations while server's initialization, its behavior is defined by a special type of content - user-data. To manage post-install operations via Terraform, we have implemented the "user_data" argument in the [serverscom_dedicated_server](https://registry.terraform.io/providers/serverscom/serverscom/latest/docs/resources/dedicated_server) resource.
