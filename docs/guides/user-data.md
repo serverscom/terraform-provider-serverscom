@@ -25,7 +25,7 @@ echo "The page was created by the user-data" | sudo tee /var/www/html/index.html
 
 **User-data inserted in the tf file**
 
-Open the file that contains your terraform resource parameters, in our case it's a `main.tf` file. Paste the script to the resource specification and use the format shown in the example. `<< EOF` and `EOF` frames the script within the `user_data` argument.
+Open the file that contains your terraform resource parameters, in our case it's a `main.tf` file. Paste the script to the resource specification and use the format shown in the example. `<< EOF` and `EOF` frame the script within the `user_data` argument.
 
 ```
 
