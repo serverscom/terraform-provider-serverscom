@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	scgo "github.com/serverscom/serverscom-go-client/pkg"
 )
 
@@ -67,7 +67,7 @@ func resourceServerscomCloudComputingInstance() *schema.Resource {
 			},
 			"ssh_key_fingerprint": {
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
 			},
 			"status": {
 				Type:     schema.TypeString,
@@ -227,8 +227,10 @@ func resourceServerscomCloudComputingInstanceCreate(d *schema.ResourceData, meta
 		input.BackupCopies = &backupCopies
 	}
 
-	sshKeyFp := d.Get("ssh_key_fingerprint").(string)
-	input.SSHKeyFingerprint = &sshKeyFp
+	if v, ok := d.GetOk("ssh_key_fingerprint"); ok {
+		sshKeyFp := v.(string)
+		input.SSHKeyFingerprint = &sshKeyFp
+	}
 
 	ctx := context.TODO()
 
