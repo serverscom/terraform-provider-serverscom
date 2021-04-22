@@ -4,7 +4,7 @@ page_title: "Servers.com User-data"
 
 # User-data
 
-User-data is a helpful tool to get rid of routine operations after server provisioning. You can get a ready-to-use server with additional software installed and configured according to your specification. The feature is built upon the cloud-init package for Linux operating systems. Cloud-init serves for performing operations while server's initialization, its behavior is defined by a special type of content - user-data. To manage post-install operations via Terraform, we've implemented the "user_data" argument in the [serverscom_dedicated_server](https://registry.terraform.io/providers/serverscom/serverscom/latest/docs/resources/dedicated_server) resource.
+User-data is a helpful tool to get rid of routine operations after server provisioning. You can get a ready-to-use server with additional software installed and configured according to your specification. The feature is built upon the cloud-init package for Linux operating systems. Cloud-init serves for performing operations while server's initialization, its behavior is defined by a special type of content - user-data. To manage post-install operations via Terraform, we рфму implemented the "user_data" argument in the [serverscom_dedicated_server](https://registry.terraform.io/providers/serverscom/serverscom/latest/docs/resources/dedicated_server) resource.
 
 The tutorial below will show you in practice how to configure your resource with operations performed after provisioning. As an example, we will create a server with a pre-installed Apache engine. Please note: the provisioned server will be billed according to your plan.
 ## Preparing
@@ -45,13 +45,13 @@ resource "serverscom_dedicated_server" "node_1" {
   # You can see the complete example of the resource in the relevant section of the documentation.
   # ...
  user_data = << EOF
-		#! /bin/bash
-		sudo apt-get update
-		sudo apt-get install -y apache2
-		sudo systemctl start apache2
-		sudo systemctl enable apache2
-		echo "The page was created by the user-data" | sudo tee /var/www/html/index.html
-	EOF
+#! /bin/bash
+sudo apt-get update
+sudo apt-get install -y apache2
+sudo systemctl start apache2
+sudo systemctl enable apache2
+echo "The page was created by the user-data" | sudo tee /var/www/html/index.html
+EOF
   
 }
 
