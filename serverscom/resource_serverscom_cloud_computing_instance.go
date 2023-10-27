@@ -13,6 +13,10 @@ import (
 	scgo "github.com/serverscom/serverscom-go-client/pkg"
 )
 
+var (
+	serverscomCloudComputingInstanceDefaultTimeout = 10 * time.Minute
+)
+
 func resourceServerscomCloudComputingInstance() *schema.Resource {
 	return &schema.Resource{
 		Read:   resourceServerscomCloudComputingInstanceRead,
@@ -21,6 +25,12 @@ func resourceServerscomCloudComputingInstance() *schema.Resource {
 		Create: resourceServerscomCloudComputingInstanceCreate,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
+		},
+
+		Timeouts: &schema.ResourceTimeout{
+			Create: schema.DefaultTimeout(serverscomCloudComputingInstanceDefaultTimeout),
+			Update: schema.DefaultTimeout(serverscomCloudComputingInstanceDefaultTimeout),
+			Delete: schema.DefaultTimeout(serverscomCloudComputingInstanceDefaultTimeout),
 		},
 
 		SchemaVersion: 1,
