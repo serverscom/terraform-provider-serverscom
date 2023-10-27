@@ -95,7 +95,7 @@ func findNetworkPoolByCidr(pools []interface{}, cidr string) (*scgo.NetworkPool,
 }
 
 func findNetworkPools(ctx context.Context, client *scgo.Client, searchPattern string) ([]interface{}, error) {
-	networkPoolsList, err := client.NetworkPools.Collection().SetSearchPattern(searchPattern).Collect(ctx)
+	networkPoolsList, err := client.NetworkPools.Collection().SetParam("search_pattern", searchPattern).Collect(ctx)
 	if err != nil {
 		return nil, err
 	}
