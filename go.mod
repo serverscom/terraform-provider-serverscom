@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/hashicorp/golang-lru v0.5.1
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.24.1
-	github.com/serverscom/serverscom-go-client v0.1.0
+	github.com/serverscom/serverscom-go-client v1.0.1
 )
 
 require (
