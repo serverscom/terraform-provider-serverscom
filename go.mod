@@ -3,7 +3,7 @@ module github.com/serverscom/terraform-provider-serverscom
 go 1.19
 
 require (
-	github.com/hashicorp/golang-lru v0.5.1
+	github.com/hashicorp/golang-lru v1.0.2
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.29.0
 	github.com/serverscom/serverscom-go-client v1.0.1
 )
