@@ -59,6 +59,10 @@ func resourceServerscomCloudComputingInstance() *schema.Resource {
 				DiffSuppressFunc: compareStrings,
 				ValidateFunc:     validation.NoZeroValues,
 			},
+			"flavors": {
+				Type:     schema.TypeMap,
+				Computed: true,
+			},
 			"gpn_enabled": {
 				Type:     schema.TypeBool,
 				Optional: true,
@@ -113,10 +117,20 @@ func resourceServerscomCloudComputingInstanceRead(d *schema.ResourceData, meta i
 		return err
 	}
 
+	flavors, err := client.CloudComputingRegions.Flavors(cloudInstance.RegionID).Collect(ctx)
+	if err != nil {
+		return err
+	}
+	flavorIds := map[string]string{}
+	for _, f := range flavors {
+		flavorIds[f.Name] = f.ID
+	}
+
 	d.Set("status", cloudInstance.Status)
 	d.Set("name", cloudInstance.Name)
 	d.Set("image", cloudInstance.ImageName)
 	d.Set("flavor", cloudInstance.FlavorName)
+	d.Set("flavors", flavorIds)
 	d.Set("private_ipv4_address", cloudInstance.PrivateIPv4Address)
 	d.Set("public_ipv4_address", cloudInstance.PublicIPv4Address)
 	d.Set("public_ipv6_address", cloudInstance.PublicIPv6Address)
@@ -138,32 +152,62 @@ func resourceServerscomCloudComputingInstanceUpdate(d *schema.ResourceData, meta
 	var err error
 
 	client := meta.(*scgo.Client)
+	hasChanges := false
 
-	input := scgo.CloudComputingInstanceUpdateInput{}
+	// update
+	updateInput := scgo.CloudComputingInstanceUpdateInput{}
 
 	name := d.Get("name").(string)
-	input.Name = &name
+	updateInput.Name = &name
 
 	if d.HasChange("backup_copies") {
+		hasChanges = true
 		backupCopies := d.Get("backup_copies").(int)
-		input.BackupCopies = &backupCopies
+		updateInput.BackupCopies = &backupCopies
 	}
 
 	if d.HasChange("ipv6_enabled") {
+		hasChanges = true
 		ipv6Enabled := d.Get("ipv6_enabled").(bool)
-		input.IPv6Enabled = &ipv6Enabled
+		updateInput.IPv6Enabled = &ipv6Enabled
 	}
 
 	if d.HasChange("gpn_enabled") {
+		hasChanges = true
 		gpnEnabled := d.Get("gpn_enabled").(bool)
-		input.GPNEnabled = &gpnEnabled
+		updateInput.GPNEnabled = &gpnEnabled
 	}
 
 	ctx := context.TODO()
 
-	_, err = client.CloudComputingInstances.Update(ctx, d.Id(), input)
-	if err != nil {
-		return err
+	if hasChanges {
+		_, err = client.CloudComputingInstances.Update(ctx, d.Id(), updateInput)
+		if err != nil {
+			return err
+		}
+	}
+
+	// upgrade
+	hasChanges = false
+	upgradeInput := scgo.CloudComputingInstanceUpgradeInput{}
+
+	if d.HasChange("flavor") {
+		hasChanges = true
+		flavor := d.Get("flavor").(string)
+		flavorIds := d.Get("flavors").(map[string]string)
+		flavorID, ok := flavorIds[flavor]
+		if !ok {
+			return fmt.Errorf("flavor (%s) not found", flavor)
+		}
+
+		upgradeInput.FlavorID = flavorID
+	}
+
+	if hasChanges {
+		_, err = client.CloudComputingInstances.Upgrade(ctx, d.Id(), upgradeInput)
+		if err != nil {
+			return err
+		}
 	}
 
 	return resourceServerscomCloudComputingInstanceRead(d, meta)
