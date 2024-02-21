@@ -33,7 +33,7 @@ $ make build
 Using the provider
 ----------------------
 
-[Setup guide](https://terraform-provider-serverscom.readthedocs.io/en/latest/topics/introduction.html)
+[Setup guide](https://registry.terraform.io/providers/serverscom/serverscom/latest/docs)
 
 Developing the Provider
 ---------------------------
