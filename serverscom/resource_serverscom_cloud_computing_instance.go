@@ -59,10 +59,6 @@ func resourceServerscomCloudComputingInstance() *schema.Resource {
 				DiffSuppressFunc: compareStrings,
 				ValidateFunc:     validation.NoZeroValues,
 			},
-			"flavors": {
-				Type:     schema.TypeMap,
-				Computed: true,
-			},
 			"gpn_enabled": {
 				Type:     schema.TypeBool,
 				Optional: true,
@@ -117,20 +113,10 @@ func resourceServerscomCloudComputingInstanceRead(d *schema.ResourceData, meta i
 		return err
 	}
 
-	flavors, err := client.CloudComputingRegions.Flavors(cloudInstance.RegionID).Collect(ctx)
-	if err != nil {
-		return err
-	}
-	flavorIds := map[string]string{}
-	for _, f := range flavors {
-		flavorIds[f.Name] = f.ID
-	}
-
 	d.Set("status", cloudInstance.Status)
 	d.Set("name", cloudInstance.Name)
 	d.Set("image", cloudInstance.ImageName)
 	d.Set("flavor", cloudInstance.FlavorName)
-	d.Set("flavors", flavorIds)
 	d.Set("private_ipv4_address", cloudInstance.PrivateIPv4Address)
 	d.Set("public_ipv4_address", cloudInstance.PublicIPv4Address)
 	d.Set("public_ipv6_address", cloudInstance.PublicIPv6Address)
@@ -193,14 +179,16 @@ func resourceServerscomCloudComputingInstanceUpdate(d *schema.ResourceData, meta
 
 	if d.HasChange("flavor") {
 		hasChanges = true
-		flavor := d.Get("flavor").(string)
-		flavorIds := d.Get("flavors").(map[string]string)
-		flavorID, ok := flavorIds[flavor]
-		if !ok {
-			return fmt.Errorf("flavor (%s) not found", flavor)
+		region, err := getRegion(d.Get("region").(string))
+		if err != nil {
+			return err
+		}
+		flavor, err := getFlavor(region.ID, d.Get("flavor").(string))
+		if err != nil {
+			return err
 		}
 
-		upgradeInput.FlavorID = flavorID
+		upgradeInput.FlavorID = flavor.ID
 	}
 
 	if hasChanges {
