@@ -26,7 +26,7 @@ func resourceServerscomDedicatedServer() *schema.Resource {
 		Delete: resourceServerscomDedicatedServerDelete,
 		Create: resourceServerscomDedicatedServerCreate,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Timeouts: &schema.ResourceTimeout{
@@ -301,22 +301,23 @@ func resourceServerscomDedicatedServerDelete(d *schema.ResourceData, meta interf
 }
 
 func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*scgo.Client)
+	var (
+		location         *scgo.Location
+		serverModel      *scgo.ServerModelOption
+		operatingSystem  *scgo.OperatingSystemOption
+		publicUplink     *scgo.UplinkOption
+		bandwidth        *scgo.BandwidthOption
+		privateUplink    *scgo.UplinkOption
+		slots            []scgo.DedicatedServerSlotInput
+		layouts          []scgo.DedicatedServerLayoutInput
+		dedicatedServers []scgo.DedicatedServer
+		dedicatedServer  scgo.DedicatedServer
 
-	var location *scgo.Location
-	var serverModel *scgo.ServerModelOption
-	var operatingSystem *scgo.OperatingSystemOption
-	var publicUplink *scgo.UplinkOption
-	var bandwidth *scgo.BandwidthOption
-	var privateUplink *scgo.UplinkOption
-	var slots []scgo.DedicatedServerSlotInput
-	var layouts []scgo.DedicatedServerLayoutInput
-	var dedicatedServers []scgo.DedicatedServer
+		publicIpv4NetworkId  *string
+		privateIpv4NetworkId *string
 
-	var publicIpv4NetworkId *string
-	var privateIpv4NetworkId *string
-
-	var err error
+		err error
+	)
 
 	input := scgo.DedicatedServerCreateInput{}
 
@@ -330,9 +331,10 @@ func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta interf
 		privateIpv4NetworkId = &privateIpv4NetworkIdValue
 	}
 
+	hostname := d.Get("hostname").(string)
 	input.Hosts = []scgo.DedicatedServerHostInput{
 		{
-			Hostname:             d.Get("hostname").(string),
+			Hostname:             hostname,
 			PublicIPv4NetworkID:  publicIpv4NetworkId,
 			PrivateIPv4NetworkID: privateIpv4NetworkId,
 		},
@@ -432,16 +434,32 @@ func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta interf
 
 	ctx := context.TODO()
 
-	dedicatedServers, err = client.Hosts.CreateDedicatedServers(ctx, input)
+	resultChan, err := serverCollector.AddRequest(ctx, serverModel.Name, &input)
 	if err != nil {
 		return err
 	}
+
+	// waiting for result from collector
+	result := <-resultChan
+	if result.Error != nil {
+		return result.Error
+	}
+
+	dedicatedServers = result.Servers
 
 	if len(dedicatedServers) == 0 {
 		return fmt.Errorf("Invalid dedicated servers count returned by api")
 	}
 
-	dedicatedServer := dedicatedServers[0]
+	// find corresponding server by title matching hostname
+	for _, server := range dedicatedServers {
+		if server.Title == hostname {
+			dedicatedServer = server
+		}
+	}
+	if dedicatedServer.ID == "" {
+		return fmt.Errorf("Can't find the server with title '%s' in api response", hostname)
+	}
 
 	d.SetId(dedicatedServer.ID)
 
