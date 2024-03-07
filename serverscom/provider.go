@@ -16,7 +16,7 @@ func Provider() *schema.Provider {
 			"endpoint": {
 				Type:        schema.TypeString,
 				Required:    true,
-				DefaultFunc: schema.EnvDefaultFunc("SERVERSCOM_API_URL", "https://api.servers.com"),
+				DefaultFunc: schema.EnvDefaultFunc("SERVERSCOM_API_URL", "https://api.servers.com/v1"),
 			},
 		},
 		DataSourcesMap: map[string]*schema.Resource{

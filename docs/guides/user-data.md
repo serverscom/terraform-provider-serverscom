@@ -44,7 +44,7 @@ resource "serverscom_dedicated_server" "node_1" {
   # Some parameters are not displayed here to shorten the specification.
   # You can see the complete example of the resource in the relevant section of the documentation.
   # ...
- user_data = << EOF
+ user_data = <<EOF
 #! /bin/bash
 sudo apt-get update
 sudo apt-get install -y apache2
