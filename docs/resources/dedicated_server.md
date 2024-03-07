@@ -21,7 +21,7 @@ resource "serverscom_dedicated_server" "node_1" {
 
   private_uplink       = "Private 10 Gbps with redundancy"
   public_uplink        = "Public 10 Gbps with redundancy"
-  bandwidth            = "200000 GB"
+  bandwidth            = "20002 Gb"
 
   ssh_key_fingerprints = [
     "cf:1d:09:ab:cb:47:97:3f:50:9a:f0:34:14:78:fa:1b"
@@ -77,7 +77,7 @@ The following arguments are supported:
 - `public_ipv4_network_id` - (Optional, string) Public IPv4 network ID.
 - `user_data` - (Optional, string) A string of the desired user data for the dedicated server.
 - `ipv6` - (Optional, bool) Is IPv6 enabled. Defaults to `false`.
-- `slot` - (Optional, list) List of drive slots.
+- `slot` - (Optional, list) List of drive slots. Slots used in partioning have to be listed.
 - `slot.0.position` - (Required, int) Slot position.
 - `slot.0.drive_model_name` - (Optional, string) The name of drive model to place in the slot.
 - `layout` - (Optional, list) List of layouts.
