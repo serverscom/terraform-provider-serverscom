@@ -146,7 +146,6 @@ func resourceServerscomDedicatedServer() *schema.Resource {
 			"ssh_key_fingerprints": {
 				Type:     schema.TypeList,
 				Optional: true,
-				MaxItems: 1,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 			},
 			"ipv6": {
