@@ -138,32 +138,64 @@ func resourceServerscomCloudComputingInstanceUpdate(d *schema.ResourceData, meta
 	var err error
 
 	client := meta.(*scgo.Client)
+	hasChanges := false
 
-	input := scgo.CloudComputingInstanceUpdateInput{}
+	// update
+	updateInput := scgo.CloudComputingInstanceUpdateInput{}
 
 	name := d.Get("name").(string)
-	input.Name = &name
+	updateInput.Name = &name
 
 	if d.HasChange("backup_copies") {
+		hasChanges = true
 		backupCopies := d.Get("backup_copies").(int)
-		input.BackupCopies = &backupCopies
+		updateInput.BackupCopies = &backupCopies
 	}
 
 	if d.HasChange("ipv6_enabled") {
+		hasChanges = true
 		ipv6Enabled := d.Get("ipv6_enabled").(bool)
-		input.IPv6Enabled = &ipv6Enabled
+		updateInput.IPv6Enabled = &ipv6Enabled
 	}
 
 	if d.HasChange("gpn_enabled") {
+		hasChanges = true
 		gpnEnabled := d.Get("gpn_enabled").(bool)
-		input.GPNEnabled = &gpnEnabled
+		updateInput.GPNEnabled = &gpnEnabled
 	}
 
 	ctx := context.TODO()
 
-	_, err = client.CloudComputingInstances.Update(ctx, d.Id(), input)
-	if err != nil {
-		return err
+	if hasChanges {
+		_, err = client.CloudComputingInstances.Update(ctx, d.Id(), updateInput)
+		if err != nil {
+			return err
+		}
+	}
+
+	// upgrade
+	hasChanges = false
+	upgradeInput := scgo.CloudComputingInstanceUpgradeInput{}
+
+	if d.HasChange("flavor") {
+		hasChanges = true
+		region, err := getRegion(d.Get("region").(string))
+		if err != nil {
+			return err
+		}
+		flavor, err := getFlavor(region.ID, d.Get("flavor").(string))
+		if err != nil {
+			return err
+		}
+
+		upgradeInput.FlavorID = flavor.ID
+	}
+
+	if hasChanges {
+		_, err = client.CloudComputingInstances.Upgrade(ctx, d.Id(), upgradeInput)
+		if err != nil {
+			return err
+		}
 	}
 
 	return resourceServerscomCloudComputingInstanceRead(d, meta)
