@@ -1,12 +1,14 @@
 TEST?=$$(go list ./... |grep -v 'vendor')
 GOFMT_FILES?=$$(find . -name '*.go' |grep -v vendor)
 PKG_NAME=template
+ARCH=$(shell go env GOARCH)
+OS=$(shell go env GOOS)
 
 default: build_dev
 
 build_dev: fmtcheck
-	mkdir -p ~/.terraform.d/registry/registry.terraform.io/serverscom/serverscom/99.0.0/darwin_amd64/
-	go build -o ~/.terraform.d/registry/registry.terraform.io/serverscom/serverscom/99.0.0/darwin_amd64/terraform-provider-serverscom
+	mkdir -p ~/.terraform.d/registry/registry.terraform.io/serverscom/serverscom/99.0.0/${OS}_${ARCH}/
+	go build -o ~/.terraform.d/registry/registry.terraform.io/serverscom/serverscom/99.0.0/${OS}_${ARCH}/terraform-provider-serverscom
 
 test: fmtcheck
 	go test -i $(TEST) || exit 1
