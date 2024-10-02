@@ -65,7 +65,10 @@ func (sc *ServerCollector) AddRequest(ctx context.Context, model string, request
 	sc.Requests[checksum] = append(sc.Requests[checksum], &Request{Input: request, ResultChan: resultChan})
 
 	if !sc.Timer.Stop() {
-		<-sc.Timer.C
+		select {
+		case <-sc.Timer.C:
+		default:
+		}
 	}
 	sc.Timer.Reset(serverCollectorTimer)
 
