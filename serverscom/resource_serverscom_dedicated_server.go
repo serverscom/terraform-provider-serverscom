@@ -410,9 +410,6 @@ func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta interf
 	input.Drives.Slots = slots
 
 	layouts = getLayouts(d)
-	if err != nil {
-		return err
-	}
 
 	input.Drives.Layout = layouts
 
