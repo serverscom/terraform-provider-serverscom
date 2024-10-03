@@ -43,5 +43,8 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	client.SetupUserAgent("terraform-provider-serverscom")
 	cache = NewCache(client)
 
+	serverCollector = NewServerCollector(client)
+	serverCollector.Run()
+
 	return client, nil
 }
