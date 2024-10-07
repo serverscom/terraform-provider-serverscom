@@ -76,6 +76,24 @@ func resourceServerscomSBM() *schema.Resource {
 					return new != "" && old == d.Get("user_data")
 				},
 			},
+			"private_ipv4_network_id": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"private_ipv4_address": {
+				Type:     schema.TypeString,
+				Computed: true,
+				Optional: true,
+			},
+			"public_ipv4_network_id": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"public_ipv4_address": {
+				Type:     schema.TypeString,
+				Computed: true,
+				Optional: true,
+			},
 			"status": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -105,6 +123,8 @@ func resourceServerscomSBMRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("status", sbm.Status)
 	d.Set("operating_system", sbm.ConfigurationDetails.OperatingSystemFullName)
 	d.Set("location", sbm.LocationCode)
+	d.Set("private_ipv4_address", sbm.PrivateIPv4Address)
+	d.Set("public_ipv4_address", sbm.PublicIPv4Address)
 
 	if sbm.Status != "active" {
 		return nil
@@ -148,13 +168,29 @@ func resourceServerscomSBMDelete(d *schema.ResourceData, meta interface{}) error
 }
 
 func resourceServerscomSBMCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*scgo.Client)
+	var (
+		publicIpv4NetworkId  *string
+		privateIpv4NetworkId *string
+	)
 
-	input := scgo.SBMServerCreateInput{}
+	input := &SBMServerCreateInput{}
 
+	if id, ok := d.GetOk("public_ipv4_network_id"); ok {
+		publicIpv4NetworkIdValue := id.(string)
+		publicIpv4NetworkId = &publicIpv4NetworkIdValue
+	}
+
+	if id, ok := d.GetOk("private_ipv4_network_id"); ok {
+		privateIpv4NetworkIdValue := id.(string)
+		privateIpv4NetworkId = &privateIpv4NetworkIdValue
+	}
+
+	hostname := d.Get("hostname").(string)
 	input.Hosts = []scgo.SBMServerHostInput{
 		{
-			Hostname: d.Get("hostname").(string),
+			Hostname:             hostname,
+			PublicIPv4NetworkID:  publicIpv4NetworkId,
+			PrivateIPv4NetworkID: privateIpv4NetworkId,
 		},
 	}
 
@@ -192,18 +228,28 @@ func resourceServerscomSBMCreate(d *schema.ResourceData, meta interface{}) error
 
 	ctx := context.TODO()
 
-	sbms, err := client.Hosts.CreateSBMServers(ctx, input)
+	resultChan, err := serverCollector.AddRequest(ctx, "sbm", input)
 	if err != nil {
 		return err
 	}
 
-	if len(sbms) == 0 {
+	// waiting for result from collector
+	result := <-resultChan
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.Servers.Count() == 0 {
 		return fmt.Errorf("Invalid SBM servers count returned by api")
 	}
 
-	sbm := sbms[0]
+	// find corresponding server by title matching hostname
+	id := result.Servers.GetIdByHostname(hostname)
+	if id == "" {
+		return fmt.Errorf("Can't find the server with title '%s' in api response", hostname)
+	}
 
-	d.SetId(sbm.ID)
+	d.SetId(id)
 
 	_, err = waitForSBMAttribute(ctx, d, "active", []string{"init", "pending"}, "status", meta, schema.TimeoutCreate)
 	if err != nil {
@@ -282,4 +328,51 @@ func getSBMFlavor(regionID int64, name string) (*scgo.SBMFlavor, error) {
 	}
 
 	return nil, fmt.Errorf("Can't find SBM flavor by: %s", name)
+}
+
+// SBMServerCreateInput implements ServerCreateInput interface
+type SBMServerCreateInput struct {
+	scgo.SBMServerCreateInput
+}
+
+// GetHosts returns hosts from server input
+func (s *SBMServerCreateInput) GetHosts() []interface{} {
+	hosts := make([]interface{}, len(s.Hosts))
+	for i, h := range s.Hosts {
+		hosts[i] = h
+	}
+	return hosts
+}
+
+// SetHosts sets hosts for server create input
+func (s *SBMServerCreateInput) SetHosts(hosts []interface{}) {
+	if hosts == nil {
+		s.Hosts = nil
+		return
+	}
+	sbmHosts := make([]scgo.SBMServerHostInput, len(hosts))
+	for i, h := range hosts {
+		sbmHosts[i] = h.(scgo.SBMServerHostInput)
+	}
+	s.Hosts = sbmHosts
+}
+
+// SBMServerResponse implements ServersResponse interface
+type SBMServerResponse struct {
+	servers []scgo.SBMServer
+}
+
+// GetIdByHostname returns server id if hostname match
+func (r *SBMServerResponse) GetIdByHostname(h string) string {
+	for _, s := range r.servers {
+		if s.Title == h {
+			return s.ID
+		}
+	}
+	return ""
+}
+
+// Count returns amount of servers in response
+func (r *SBMServerResponse) Count() int {
+	return len(r.servers)
 }

@@ -301,16 +301,14 @@ func resourceServerscomDedicatedServerDelete(d *schema.ResourceData, meta interf
 
 func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta interface{}) error {
 	var (
-		location         *scgo.Location
-		serverModel      *scgo.ServerModelOption
-		operatingSystem  *scgo.OperatingSystemOption
-		publicUplink     *scgo.UplinkOption
-		bandwidth        *scgo.BandwidthOption
-		privateUplink    *scgo.UplinkOption
-		slots            []scgo.DedicatedServerSlotInput
-		layouts          []scgo.DedicatedServerLayoutInput
-		dedicatedServers []scgo.DedicatedServer
-		dedicatedServer  scgo.DedicatedServer
+		location        *scgo.Location
+		serverModel     *scgo.ServerModelOption
+		operatingSystem *scgo.OperatingSystemOption
+		publicUplink    *scgo.UplinkOption
+		bandwidth       *scgo.BandwidthOption
+		privateUplink   *scgo.UplinkOption
+		slots           []scgo.DedicatedServerSlotInput
+		layouts         []scgo.DedicatedServerLayoutInput
 
 		publicIpv4NetworkId  *string
 		privateIpv4NetworkId *string
@@ -318,7 +316,7 @@ func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta interf
 		err error
 	)
 
-	input := scgo.DedicatedServerCreateInput{}
+	input := &DedicatedServerCreateInput{}
 
 	if id, ok := d.GetOk("public_ipv4_network_id"); ok {
 		publicIpv4NetworkIdValue := id.(string)
@@ -430,7 +428,7 @@ func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta interf
 
 	ctx := context.TODO()
 
-	resultChan, err := serverCollector.AddRequest(ctx, serverModel.Name, &input)
+	resultChan, err := serverCollector.AddRequest(ctx, "dedicated", input)
 	if err != nil {
 		return err
 	}
@@ -441,23 +439,17 @@ func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta interf
 		return result.Error
 	}
 
-	dedicatedServers = result.Servers
-
-	if len(dedicatedServers) == 0 {
+	if result.Servers.Count() == 0 {
 		return fmt.Errorf("Invalid dedicated servers count returned by api")
 	}
 
 	// find corresponding server by title matching hostname
-	for _, server := range dedicatedServers {
-		if server.Title == hostname {
-			dedicatedServer = server
-		}
-	}
-	if dedicatedServer.ID == "" {
+	id := result.Servers.GetIdByHostname(hostname)
+	if id == "" {
 		return fmt.Errorf("Can't find the server with title '%s' in api response", hostname)
 	}
 
-	d.SetId(dedicatedServer.ID)
+	d.SetId(id)
 
 	_, err = waitForDedicatedServerAttribute(d, "active", []string{"init", "pending"}, "status", meta, schema.TimeoutCreate)
 	if err != nil {
@@ -732,4 +724,51 @@ func newDedicatedServerStateRefreshFunc(d *schema.ResourceData, attribute string
 
 		return nil, "", nil
 	}
+}
+
+// DedicatedServerCreateInput implements ServerCreateInput interface for dedicated servers
+type DedicatedServerCreateInput struct {
+	scgo.DedicatedServerCreateInput
+}
+
+// GetHosts returns hosts from server input
+func (d *DedicatedServerCreateInput) GetHosts() []interface{} {
+	hosts := make([]interface{}, len(d.Hosts))
+	for i, h := range d.Hosts {
+		hosts[i] = h
+	}
+	return hosts
+}
+
+// SetHosts sets hosts for server create input
+func (d *DedicatedServerCreateInput) SetHosts(hosts []interface{}) {
+	if hosts == nil {
+		d.Hosts = nil
+		return
+	}
+	dedicatedHosts := make([]scgo.DedicatedServerHostInput, len(hosts))
+	for i, h := range hosts {
+		dedicatedHosts[i] = h.(scgo.DedicatedServerHostInput)
+	}
+	d.Hosts = dedicatedHosts
+}
+
+// SBMServerResponse implements ServersResponse interface
+type DedicatedServerResponse struct {
+	servers []scgo.DedicatedServer
+}
+
+// GetIdByHostname returns server id if hostname match
+func (r *DedicatedServerResponse) GetIdByHostname(h string) string {
+	for _, s := range r.servers {
+		if s.Title == h {
+			return s.ID
+		}
+	}
+	return ""
+}
+
+// Count returns amount of servers in response
+func (r *DedicatedServerResponse) Count() int {
+	return len(r.servers)
 }
