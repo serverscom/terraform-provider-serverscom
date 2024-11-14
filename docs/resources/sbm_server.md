@@ -15,7 +15,7 @@ resource "serverscom_sbm_server" "node_01" {
   hostname             = "node-01"
   location             = "AMS1"
   flavor               = "SBM-01"
-  operating_system     = "Ubuntu 16.04-server x86_64"
+  operating_system     = "Ubuntu 24.04-server x86_64"
   ssh_key_fingerprints = [
     "cf:1d:09:ab:cb:47:97:3f:50:9a:f0:34:14:78:fa:1b"
   ]
