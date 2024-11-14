@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru"
 	scgo "github.com/serverscom/serverscom-go-client/pkg"
 )
 
@@ -234,4 +234,46 @@ func (c *Cache) CloudComputingFlavors(regionID int64) ([]scgo.CloudComputingFlav
 	c.lru.Add(key, cloudFlavors)
 
 	return cloudFlavors, nil
+}
+
+func (c *Cache) SBMOperatingSystems(locationID int64, sbmFlavorModelID int64) ([]scgo.OperatingSystemOption, error) {
+	c.Lock()
+	defer c.Unlock()
+
+	key := fmt.Sprintf("locations/%d/sbm_flavor_models/%d/operating_systems", locationID, sbmFlavorModelID)
+
+	val, ok := c.lru.Get(key)
+	if ok {
+		return val.([]scgo.OperatingSystemOption), nil
+	}
+
+	operatingSystems, err := c.client.Locations.SBMOperatingSystemOptions(locationID, sbmFlavorModelID).Collect(c.ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	c.lru.Add(key, operatingSystems)
+
+	return operatingSystems, nil
+}
+
+func (c *Cache) SBMFlavors(regionID int64) ([]scgo.SBMFlavor, error) {
+	c.Lock()
+	defer c.Unlock()
+
+	key := fmt.Sprintf("sbm/regions/%d/flavors", regionID)
+
+	val, ok := c.lru.Get(key)
+	if ok {
+		return val.([]scgo.SBMFlavor), nil
+	}
+
+	sbmFlavors, err := c.client.Locations.SBMFlavorOptions(regionID).Collect(c.ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	c.lru.Add(key, sbmFlavors)
+
+	return sbmFlavors, nil
 }

@@ -28,6 +28,7 @@ func Provider() *schema.Provider {
 			"serverscom_cloud_computing_instance": resourceServerscomCloudComputingInstance(),
 			"serverscom_ssh_key":                  resourceServerscomSSHKey(),
 			"serverscom_subnetwork":               resourceServerscomSubnetwork(),
+			"serverscom_sbm_server":               resourceServerscomSBM(),
 		},
 		ConfigureFunc: providerConfigure,
 	}
