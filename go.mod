@@ -1,6 +1,6 @@
 module github.com/serverscom/terraform-provider-serverscom
 
-go 1.19
+go 1.20
 
 require (
 	github.com/hashicorp/golang-lru v1.0.2
