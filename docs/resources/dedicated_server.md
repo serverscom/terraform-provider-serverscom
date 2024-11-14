@@ -17,7 +17,7 @@ resource "serverscom_dedicated_server" "node_1" {
   server_model         = "Dell R440 / 2xIntel Xeon Silver-4114 / 32 GB RAM / 1x480 GB SSD"
   ram_size             = 32
 
-  operating_system     = "Ubuntu 16.04-server x86_64"
+  operating_system     = "Ubuntu 24.04-server x86_64"
 
   private_uplink       = "Private 10 Gbps with redundancy"
   public_uplink        = "Public 10 Gbps with redundancy"
@@ -72,7 +72,7 @@ The following arguments are supported:
 - `private_uplink` - (Required, string) The dedicated server private uplink name.
 - `public_uplink` - (Optional, string) The dedicated server public uplink name.
 - `bandwidth` - (Optional, string) The dedicated server public bandwidth name.
-- `ssh_key_fingerprints.0` - (Optional, string) SSH key fingerprint.
+- `ssh_key_fingerprints` - (Optional, list) SSH key fingerprint.
 - `private_ipv4_network_id` - (Optional, string) Private IPv4 network ID.
 - `public_ipv4_network_id` - (Optional, string) Public IPv4 network ID.
 - `user_data` - (Optional, string) A string of the desired user data for the dedicated server.
