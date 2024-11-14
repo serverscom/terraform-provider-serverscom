@@ -70,7 +70,7 @@ The following arguments are supported:
 - `ram_size` - (Optional, int) Size of the RAM (GB).
 - `operating_system` - (Optional, string) The dedicated server operating system name.
 - `private_uplink` - (Required, string) The dedicated server private uplink name.
-- `public_uplink` - (Required, string) The dedicated server public uplink name.
+- `public_uplink` - (Optional, string) The dedicated server public uplink name.
 - `bandwidth` - (Optional, string) The dedicated server public bandwidth name.
 - `ssh_key_fingerprints` - (Optional, list) SSH key fingerprint.
 - `private_ipv4_network_id` - (Optional, string) Private IPv4 network ID.
