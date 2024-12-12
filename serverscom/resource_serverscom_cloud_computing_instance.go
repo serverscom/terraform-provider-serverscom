@@ -91,7 +91,7 @@ func resourceServerscomCloudComputingInstance() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"private_ipv6_address": {
+			"public_ipv6_address": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
