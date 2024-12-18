@@ -100,6 +100,13 @@ func resourceServerscomL2Segment() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"labels": {
+				Type:     schema.TypeMap,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
@@ -133,6 +140,7 @@ func resourceServerscomL2SegmentRead(d *schema.ResourceData, meta interface{}) e
 	d.Set("status", l2Segment.Status)
 	d.Set("created_at", l2Segment.Created.String())
 	d.Set("updated_at", l2Segment.Updated.String())
+	d.Set("labels", l2Segment.Labels)
 
 	if l2Segment.Status != "active" {
 		return nil
@@ -160,6 +168,17 @@ func resourceServerscomL2SegmentUpdate(d *schema.ResourceData, meta interface{})
 
 	if d.HasChange("member") {
 		input.Members = getSchemaMembers(d)
+	}
+
+	if d.HasChange("labels") {
+		if labelsRaw, ok := d.GetOk("labels"); ok {
+			labels := labelsRaw.(map[string]interface{})
+			stringLabels := make(map[string]string)
+			for k, v := range labels {
+				stringLabels[k] = v.(string)
+			}
+			input.Labels = stringLabels
+		}
 	}
 
 	if d.HasChanges("name", "member") {
@@ -235,6 +254,15 @@ func resourceServerscomL2SegmentCreate(d *schema.ResourceData, meta interface{})
 
 	input.LocationGroupID = locationGroup.ID
 	input.Members = getSchemaMembers(d)
+
+	if labelsRaw, ok := d.GetOk("labels"); ok {
+		labels := labelsRaw.(map[string]interface{})
+		stringLabels := make(map[string]string)
+		for k, v := range labels {
+			stringLabels[k] = v.(string)
+		}
+		input.Labels = stringLabels
+	}
 
 	l2Segment, err := client.L2Segments.Create(ctx, input)
 	if err != nil {

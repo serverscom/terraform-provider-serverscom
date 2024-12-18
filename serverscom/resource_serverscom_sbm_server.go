@@ -98,6 +98,13 @@ func resourceServerscomSBM() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"labels": {
+				Type:     schema.TypeMap,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
@@ -125,6 +132,7 @@ func resourceServerscomSBMRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("location", sbm.LocationCode)
 	d.Set("private_ipv4_address", sbm.PrivateIPv4Address)
 	d.Set("public_ipv4_address", sbm.PublicIPv4Address)
+	d.Set("labels", sbm.Labels)
 
 	if sbm.Status != "active" {
 		return nil
@@ -192,6 +200,14 @@ func resourceServerscomSBMCreate(d *schema.ResourceData, meta interface{}) error
 			PublicIPv4NetworkID:  publicIpv4NetworkId,
 			PrivateIPv4NetworkID: privateIpv4NetworkId,
 		},
+	}
+	if labelsRaw, ok := d.GetOk("labels"); ok {
+		labels := labelsRaw.(map[string]interface{})
+		stringLabels := make(map[string]string)
+		for k, v := range labels {
+			stringLabels[k] = v.(string)
+		}
+		input.Hosts[0].Labels = stringLabels
 	}
 
 	location, err := getLocation(d.Get("location").(string))
