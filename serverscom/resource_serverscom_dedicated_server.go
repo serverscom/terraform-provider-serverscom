@@ -268,7 +268,33 @@ func resourceServerscomDedicatedServerRead(d *schema.ResourceData, meta interfac
 }
 
 func resourceServerscomDedicatedServerUpdate(d *schema.ResourceData, meta interface{}) error {
-	return resourceServerscomDedicatedServerRead(d, meta)
+	input := scgo.DedicatedServerUpdateInput{}
+
+	hasChanges := false
+	if d.HasChange("labels") {
+		hasChanges = true
+		if labelsRaw, ok := d.GetOk("labels"); ok {
+			labels := labelsRaw.(map[string]interface{})
+			stringLabels := make(map[string]string)
+			for k, v := range labels {
+				stringLabels[k] = v.(string)
+			}
+			input.Labels = stringLabels
+		}
+	}
+
+	if hasChanges {
+		client := meta.(*scgo.Client)
+		ctx := context.TODO()
+
+		if _, err := client.Hosts.UpdateDedicatedServer(ctx, d.Id(), input); err != nil {
+			return err
+		}
+
+		return resourceServerscomDedicatedServerRead(d, meta)
+	}
+
+	return nil
 }
 
 func resourceServerscomDedicatedServerDelete(d *schema.ResourceData, meta interface{}) error {
