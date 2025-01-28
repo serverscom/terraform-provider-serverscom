@@ -283,7 +283,7 @@ func resourceServerscomCloudComputingInstanceCreate(d *schema.ResourceData, meta
 
 	d.SetId(cloudInstance.ID)
 
-	_, err = waitForCloudComputingInstanceAttribute(d, "ACTIVE", []string{"PROVISIONING", "BUILDING", "REBOOTING"}, "status", meta)
+	_, err = waitForCloudComputingInstanceAttribute(d, "ACTIVE", []string{"PROVISIONING", "BUILDING", "REBOOTING"}, "status", meta, schema.TimeoutCreate)
 	if err != nil {
 		return fmt.Errorf("Error waiting for cloud computing instance (%s) to become active: %s", d.Id(), err)
 	}
@@ -291,7 +291,7 @@ func resourceServerscomCloudComputingInstanceCreate(d *schema.ResourceData, meta
 	return resourceServerscomCloudComputingInstanceRead(d, meta)
 }
 
-func waitForCloudComputingInstanceAttribute(d *schema.ResourceData, target string, pending []string, attribute string, meta interface{}) (interface{}, error) {
+func waitForCloudComputingInstanceAttribute(d *schema.ResourceData, target string, pending []string, attribute string, meta interface{}, timeoutKey string) (interface{}, error) {
 	log.Printf(
 		"[INFO] Waiting for cloud computing instance (%s) to have %s of %s",
 		d.Id(), attribute, target,
@@ -301,7 +301,7 @@ func waitForCloudComputingInstanceAttribute(d *schema.ResourceData, target strin
 		Pending:    pending,
 		Target:     []string{target},
 		Refresh:    newCloudComputingInstanceStateRefreshFunc(d, attribute, meta),
-		Timeout:    5 * time.Minute,
+		Timeout:    d.Timeout(timeoutKey),
 		Delay:      1 * time.Minute,
 		MinTimeout: 3 * time.Second,
 	}
