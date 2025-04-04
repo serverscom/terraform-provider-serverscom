@@ -685,12 +685,13 @@ func waitForDedicatedServerAttribute(d *schema.ResourceData, target string, pend
 	)
 
 	stateConf := &resource.StateChangeConf{
-		Pending:    pending,
-		Target:     []string{target},
-		Refresh:    newDedicatedServerStateRefreshFunc(d, attribute, meta),
-		Timeout:    d.Timeout(timeoutKey),
-		Delay:      1 * time.Minute,
-		MinTimeout: 30 * time.Second,
+		Pending:      pending,
+		Target:       []string{target},
+		Refresh:      newDedicatedServerStateRefreshFunc(d, attribute, meta),
+		Timeout:      d.Timeout(timeoutKey),
+		PollInterval: 1 * time.Minute,
+		Delay:        1 * time.Minute,
+		MinTimeout:   30 * time.Second,
 	}
 
 	return stateConf.WaitForState()
