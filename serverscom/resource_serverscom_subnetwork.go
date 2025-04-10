@@ -17,7 +17,7 @@ func resourceServerscomSubnetwork() *schema.Resource {
 		Delete: resourceServerscomSubnetworkDelete,
 		Create: resourceServerscomSubnetworkCreate,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		SchemaVersion: 1,

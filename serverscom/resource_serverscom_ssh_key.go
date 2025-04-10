@@ -18,7 +18,7 @@ func resourceServerscomSSHKey() *schema.Resource {
 		Delete: resourceServerscomSSHKeyDelete,
 		Create: resourceServerscomSSHKeyCreate,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		SchemaVersion: 1,
