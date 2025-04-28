@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	scgo "github.com/serverscom/serverscom-go-client/pkg"
@@ -24,7 +24,7 @@ func resourceServerscomCloudComputingInstance() *schema.Resource {
 		Delete: resourceServerscomCloudComputingInstanceDelete,
 		Create: resourceServerscomCloudComputingInstanceCreate,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Timeouts: &schema.ResourceTimeout{
@@ -283,21 +283,21 @@ func resourceServerscomCloudComputingInstanceCreate(d *schema.ResourceData, meta
 
 	d.SetId(cloudInstance.ID)
 
-	_, err = waitForCloudComputingInstanceAttribute(d, "ACTIVE", []string{"PROVISIONING", "BUILDING", "REBOOTING"}, "status", meta)
+	_, err = waitForCloudComputingInstanceAttribute(ctx, d, "ACTIVE", []string{"PROVISIONING", "BUILDING", "REBOOTING"}, "status", meta)
 	if err != nil {
 		return fmt.Errorf("Error waiting for cloud computing instance (%s) to become active: %s", d.Id(), err)
 	}
 
-	return resourceServerscomCloudComputingInstanceRead(d, meta)
+	return nil
 }
 
-func waitForCloudComputingInstanceAttribute(d *schema.ResourceData, target string, pending []string, attribute string, meta interface{}) (interface{}, error) {
+func waitForCloudComputingInstanceAttribute(ctx context.Context, d *schema.ResourceData, target string, pending []string, attribute string, meta interface{}) (interface{}, error) {
 	log.Printf(
 		"[INFO] Waiting for cloud computing instance (%s) to have %s of %s",
 		d.Id(), attribute, target,
 	)
 
-	stateConf := &resource.StateChangeConf{
+	stateConf := &retry.StateChangeConf{
 		Pending:    pending,
 		Target:     []string{target},
 		Refresh:    newCloudComputingInstanceStateRefreshFunc(d, attribute, meta),
@@ -306,13 +306,10 @@ func waitForCloudComputingInstanceAttribute(d *schema.ResourceData, target strin
 		MinTimeout: 3 * time.Second,
 	}
 
-	return stateConf.WaitForState()
+	return stateConf.WaitForStateContext(ctx)
 }
 
-func newCloudComputingInstanceStateRefreshFunc(d *schema.ResourceData, attribute string, meta interface{}) resource.StateRefreshFunc {
-	client := meta.(*scgo.Client)
-	ctx := context.TODO()
-
+func newCloudComputingInstanceStateRefreshFunc(d *schema.ResourceData, attribute string, meta interface{}) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		err := resourceServerscomCloudComputingInstanceRead(d, meta)
 		if err != nil {
@@ -320,18 +317,12 @@ func newCloudComputingInstanceStateRefreshFunc(d *schema.ResourceData, attribute
 		}
 
 		// See if we can access our attribute
-		if attr, ok := d.GetOkExists(attribute); ok {
-			cloudInstance, err := client.CloudComputingInstances.Get(ctx, d.Id())
-
-			if err != nil {
-				return nil, "", fmt.Errorf("Error retrieving cloud instance: %s", err)
-			}
-
+		if attr, ok := d.GetOk(attribute); ok {
 			switch attr.(type) {
 			case bool:
-				return &cloudInstance, strconv.FormatBool(attr.(bool)), nil
+				return d, strconv.FormatBool(attr.(bool)), nil
 			default:
-				return &cloudInstance, attr.(string), nil
+				return d, attr.(string), nil
 			}
 		}
 
