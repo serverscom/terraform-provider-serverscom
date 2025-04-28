@@ -32,6 +32,8 @@ func Provider() *schema.Provider {
 			"serverscom_operating_system_order_options":     dataSourceServerscomOperatingSystemOrderOptions(),
 			"serverscom_sbm_operating_system_order_option":  dataSourceServerscomSbmOperatingSystemOrderOption(),
 			"serverscom_sbm_operating_system_order_options": dataSourceServerscomSbmOperatingSystemOrderOptions(),
+			"serverscom_ram_order_option":                   dataSourceServerscomRamOrderOption(),
+			"serverscom_ram_order_options":                  dataSourceServerscomRamOrderOptions(),
 			"serverscom_uplink_model_order_option":          dataSourceServerscomUplinkModelOrderOption(),
 			"serverscom_uplink_model_order_options":         dataSourceServerscomUplinkModelOrderOptions(),
 			"serverscom_bandwidth_order_option":             dataSourceServerscomBandwidthOrderOption(),
