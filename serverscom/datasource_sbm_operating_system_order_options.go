@@ -8,20 +8,20 @@ import (
 	scgo "github.com/serverscom/serverscom-go-client/pkg"
 )
 
-func dataSourceServerscomOperatingSystemOrderOptions() *schema.Resource {
+func dataSourceServerscomSbmOperatingSystemOrderOptions() *schema.Resource {
 	return &schema.Resource{
-		Read: dataSourceServerscomOperatingSystemOrderOptionsRead,
+		Read: dataSourceServerscomSbmOperatingSystemOrderOptionsRead,
 
 		Schema: map[string]*schema.Schema{
 			"location_id": {
 				Type:     schema.TypeInt,
 				Required: true,
 			},
-			"server_model_id": {
+			"sbm_flavor_model_id": {
 				Type:     schema.TypeInt,
 				Required: true,
 			},
-			"operating_systems": {
+			"sbm_operating_systems": {
 				Type:     schema.TypeList,
 				Computed: true,
 				Elem: &schema.Resource{
@@ -58,23 +58,23 @@ func dataSourceServerscomOperatingSystemOrderOptions() *schema.Resource {
 	}
 }
 
-func dataSourceServerscomOperatingSystemOrderOptionsRead(d *schema.ResourceData, meta any) error {
+func dataSourceServerscomSbmOperatingSystemOrderOptionsRead(d *schema.ResourceData, meta any) error {
 	client := meta.(*scgo.Client)
 	ctx := context.TODO()
 
 	locationID := d.Get("location_id").(int)
-	serverModelID := d.Get("server_model_id").(int)
+	sbmFlavorModelID := d.Get("sbm_flavor_model_id").(int)
 
-	collection := client.Locations.OperatingSystemOptions(int64(locationID), int64(serverModelID))
+	collection := client.Locations.SBMOperatingSystemOptions(int64(locationID), int64(sbmFlavorModelID))
 
-	operatingSystems, err := collection.Collect(ctx)
+	options, err := collection.Collect(ctx)
 	if err != nil {
-		return fmt.Errorf("Error retrieving operating system order options: %s", err.Error())
+		return fmt.Errorf("Error retrieving SBM operating system order options: %s", err.Error())
 	}
 
-	osList := make([]map[string]any, 0, len(operatingSystems))
-	for _, os := range operatingSystems {
-		osList = append(osList, map[string]any{
+	optionList := make([]map[string]any, 0, len(options))
+	for _, os := range options {
+		optionList = append(optionList, map[string]any{
 			"id":          int(os.ID),
 			"full_name":   os.FullName,
 			"name":        os.Name,
@@ -84,9 +84,11 @@ func dataSourceServerscomOperatingSystemOrderOptionsRead(d *schema.ResourceData,
 		})
 	}
 
-	d.SetId(fmt.Sprintf("operating_systems-%d-%d", locationID, serverModelID))
-	if err := d.Set("operating_systems", osList); err != nil {
-		return fmt.Errorf("Error setting operating system order options: %s", err.Error())
+	id := fmt.Sprintf("sbm_operating_systems-%d-%d", locationID, sbmFlavorModelID)
+	d.SetId(id)
+
+	if err := d.Set("sbm_operating_systems", optionList); err != nil {
+		return fmt.Errorf("Error setting SBM operating system order options: %s", err.Error())
 	}
 
 	return nil

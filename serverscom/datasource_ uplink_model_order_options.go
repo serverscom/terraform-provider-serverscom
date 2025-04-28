@@ -41,7 +41,7 @@ func dataSourceServerscomUplinkModelOrderOptions() *schema.Resource {
 					},
 				},
 			},
-			"uplink_model_order_options": {
+			"uplink_models": {
 				Type:     schema.TypeList,
 				Computed: true,
 				Elem: &schema.Resource{
@@ -82,7 +82,7 @@ func dataSourceServerscomUplinkModelOrderOptionsRead(d *schema.ResourceData, met
 
 	collection := client.Locations.UplinkOptions(int64(locationID), int64(serverModelID))
 
-	id := fmt.Sprintf("uplink_model_order_options-%d-%d", locationID, serverModelID)
+	id := fmt.Sprintf("uplink_models-%d-%d", locationID, serverModelID)
 	if v, ok := d.GetOk("filter"); ok {
 		filter := v.([]any)[0].(map[string]any)
 
@@ -117,7 +117,7 @@ func dataSourceServerscomUplinkModelOrderOptionsRead(d *schema.ResourceData, met
 	}
 
 	d.SetId(id)
-	if err := d.Set("uplink_model_order_options", uplinkList); err != nil {
+	if err := d.Set("uplink_models", uplinkList); err != nil {
 		return fmt.Errorf("Error setting uplink model order options: %s", err.Error())
 	}
 
