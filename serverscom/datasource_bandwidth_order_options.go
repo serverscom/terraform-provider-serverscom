@@ -28,7 +28,6 @@ func dataSourceServerscomBandwidthOrderOptions() *schema.Resource {
 			"filter": {
 				Type:     schema.TypeList,
 				Optional: true,
-				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"type": {

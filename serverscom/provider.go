@@ -36,6 +36,8 @@ func Provider() *schema.Provider {
 			"serverscom_uplink_model_order_options":         dataSourceServerscomUplinkModelOrderOptions(),
 			"serverscom_bandwidth_order_option":             dataSourceServerscomBandwidthOrderOption(),
 			"serverscom_bandwidth_order_options":            dataSourceServerscomBandwidthOrderOptions(),
+			"serverscom_sbm_flavor_order_option":            dataSourceServerscomSbmFlavorOrderOption(),
+			"serverscom_sbm_flavor_order_options":           dataSourceServerscomSbmFlavorOrderOptions(),
 		},
 		ResourcesMap: map[string]*schema.Resource{
 			"serverscom_dedicated_server":         resourceServerscomDedicatedServer(),

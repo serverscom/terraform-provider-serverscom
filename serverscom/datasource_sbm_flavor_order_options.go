@@ -3,14 +3,15 @@ package serverscom
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	scgo "github.com/serverscom/serverscom-go-client/pkg"
 )
 
-func dataSourceServerscomServerModelOrderOptions() *schema.Resource {
+func dataSourceServerscomSbmFlavorOrderOptions() *schema.Resource {
 	return &schema.Resource{
-		Read: dataSourceServerscomServerModelOrderOptionsRead,
+		Read: dataSourceServerscomSbmFlavorOrderOptionsRead,
 
 		Schema: map[string]*schema.Schema{
 			"location_id": {
@@ -27,15 +28,15 @@ func dataSourceServerscomServerModelOrderOptions() *schema.Resource {
 							Optional:    true,
 							Description: "This pattern is used to return resources containing the parameter value in its name.",
 						},
-						"has_raid_controller": {
+						"show_all": {
 							Type:        schema.TypeBool,
 							Optional:    true,
-							Description: "Specify by true or false value, if only servers with RAID controller should be taken to an output.",
+							Description: "If true, all flavors including unavailable ones will be shown.",
 						},
 					},
 				},
 			},
-			"server_models": {
+			"sbm_flavors": {
 				Type:     schema.TypeList,
 				Computed: true,
 				Elem: &schema.Resource{
@@ -61,31 +62,39 @@ func dataSourceServerscomServerModelOrderOptions() *schema.Resource {
 							Computed: true,
 						},
 						"cpu_frequency": {
-							Type:     schema.TypeInt,
-							Computed: true,
-						},
-						"ram": {
-							Type:     schema.TypeInt,
-							Computed: true,
-						},
-						"ram_type": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
-						"max_ram": {
+						"ram_size": {
 							Type:     schema.TypeInt,
 							Computed: true,
 						},
-						"has_raid_controller": {
-							Type:     schema.TypeBool,
-							Computed: true,
-						},
-						"raid_controller_name": {
+						"drives_configuration": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
-						"drive_slots_count": {
+						"public_uplink_model_id": {
 							Type:     schema.TypeInt,
+							Computed: true,
+						},
+						"public_uplink_model_name": {
+							Type:     schema.TypeString,
+							Computed: true,
+						},
+						"private_uplink_model_id": {
+							Type:     schema.TypeInt,
+							Computed: true,
+						},
+						"private_uplink_model_name": {
+							Type:     schema.TypeString,
+							Computed: true,
+						},
+						"bandwidth_id": {
+							Type:     schema.TypeInt,
+							Computed: true,
+						},
+						"bandwidth_name": {
+							Type:     schema.TypeString,
 							Computed: true,
 						},
 					},
@@ -95,23 +104,24 @@ func dataSourceServerscomServerModelOrderOptions() *schema.Resource {
 	}
 }
 
-func dataSourceServerscomServerModelOrderOptionsRead(d *schema.ResourceData, meta any) error {
+func dataSourceServerscomSbmFlavorOrderOptionsRead(d *schema.ResourceData, meta any) error {
 	client := meta.(*scgo.Client)
 	ctx := context.TODO()
 
 	locationID := d.Get("location_id").(int)
 
-	collection := client.Locations.ServerModelOptions(int64(locationID))
+	collection := client.Locations.SBMFlavorOptions(int64(locationID))
 
-	id := fmt.Sprintf("server_models-%d", locationID)
+	id := fmt.Sprintf("sbm_flavors-%d", locationID)
+
 	if v, ok := d.GetOk("filter"); ok {
 		filter := v.([]any)[0].(map[string]any)
 
 		if searchPattern, ok := filter["search_pattern"]; ok && searchPattern.(string) != "" {
 			collection = collection.SetParam("search_pattern", searchPattern.(string))
 		}
-		if hasRaidController, ok := filter["has_raid_controller"]; ok {
-			collection = collection.SetParam("has_raid_controller", fmt.Sprintf("%v", hasRaidController.(bool)))
+		if showAll, ok := filter["show_all"]; ok {
+			collection = collection.SetParam("show_all", strconv.FormatBool(showAll.(bool)))
 		}
 
 		hash, err := hashFilter(filter)
@@ -123,31 +133,33 @@ func dataSourceServerscomServerModelOrderOptionsRead(d *schema.ResourceData, met
 
 	options, err := collection.Collect(ctx)
 	if err != nil {
-		return fmt.Errorf("Error retrieving server model order options: %s", err.Error())
+		return fmt.Errorf("Error retrieving SBM flavor order options: %s", err.Error())
 	}
 
 	optionList := make([]map[string]any, 0, len(options))
-	for _, option := range options {
-		optionMap := map[string]any{
-			"id":                   int(option.ID),
-			"name":                 option.Name,
-			"cpu_name":             option.CPUName,
-			"cpu_count":            option.CPUCount,
-			"cpu_cores_count":      option.CPUCoresCount,
-			"cpu_frequency":        option.CPUFrequency,
-			"ram":                  option.RAM,
-			"ram_type":             option.RAMType,
-			"max_ram":              option.MaxRAM,
-			"has_raid_controller":  option.HasRAIDController,
-			"raid_controller_name": option.RAIDControllerName,
-			"drive_slots_count":    option.DriveSlotsCount,
-		}
-		optionList = append(optionList, optionMap)
+	for _, flavor := range options {
+		optionList = append(optionList, map[string]any{
+			"id":                        int(flavor.ID),
+			"name":                      flavor.Name,
+			"cpu_name":                  flavor.CPUName,
+			"cpu_count":                 flavor.CPUCount,
+			"cpu_cores_count":           flavor.CPUCoresCount,
+			"cpu_frequency":             flavor.CPUFrequency,
+			"ram_size":                  flavor.RAMSize,
+			"drives_configuration":      flavor.DrivesConfiguration,
+			"public_uplink_model_id":    flavor.PublicUplinkModelID,
+			"public_uplink_model_name":  flavor.PublicUplinkModelName,
+			"private_uplink_model_id":   flavor.PrivateUplinkModelID,
+			"private_uplink_model_name": flavor.PrivateUplinkModelName,
+			"bandwidth_id":              flavor.BandwidthID,
+			"bandwidth_name":            flavor.BandwidthName,
+		})
 	}
 
 	d.SetId(id)
-	if err := d.Set("server_models", optionList); err != nil {
-		return fmt.Errorf("Error setting server model order options: %s", err.Error())
+
+	if err := d.Set("sbm_flavors", optionList); err != nil {
+		return fmt.Errorf("Error setting SBM flavor order options: %s", err.Error())
 	}
 
 	return nil
