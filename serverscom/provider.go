@@ -20,10 +20,14 @@ func Provider() *schema.Provider {
 			},
 		},
 		DataSourcesMap: map[string]*schema.Resource{
-			"serverscom_network_pool":     datasourceServerscomNetworkPool(),
-			"serverscom_dedicated_server": dataSourceServerscomDedicatedServer(),
-			"serverscom_location":         dataSourceServerscomLocation(),
-			"serverscom_locations":        dataSourceServerscomLocations(),
+			"serverscom_network_pool":               datasourceServerscomNetworkPool(),
+			"serverscom_dedicated_server":           dataSourceServerscomDedicatedServer(),
+			"serverscom_location":                   dataSourceServerscomLocation(),
+			"serverscom_locations":                  dataSourceServerscomLocations(),
+			"serverscom_server_model_order_option":  dataSourceServerscomServerModelOrderOption(),
+			"serverscom_server_model_order_options": dataSourceServerscomServerModelOrderOptions(),
+			"serverscom_drive_model_order_option":   dataSourceServerscomDriveModelOrderOption(),
+			"serverscom_drive_model_order_options":  dataSourceServerscomDriveModelOrderOptions(),
 		},
 		ResourcesMap: map[string]*schema.Resource{
 			"serverscom_dedicated_server":         resourceServerscomDedicatedServer(),
