@@ -18,6 +18,10 @@ func dataSourceServerscomServerModelOrderOption() *schema.Resource {
 				Type:     schema.TypeInt,
 				Required: true,
 			},
+			"server_model_id": {
+				Type:     schema.TypeInt,
+				Required: true,
+			},
 			"name": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -99,7 +103,7 @@ func dataSourceServerscomServerModelOrderOptionRead(d *schema.ResourceData, meta
 	ctx := context.TODO()
 
 	locationID := d.Get("location_id").(int)
-	serverModelID := d.Get("server_model_id").(int)
+	serverModelID := d.Get("id").(int)
 
 	option, err := client.Locations.GetServerModelOption(ctx, int64(locationID), int64(serverModelID))
 	if err != nil {
