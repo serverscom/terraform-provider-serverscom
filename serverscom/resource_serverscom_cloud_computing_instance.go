@@ -79,6 +79,16 @@ func resourceServerscomCloudComputingInstance() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
+			"user_data": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				ValidateFunc: validation.NoZeroValues,
+				StateFunc:    HashStringStateFunc(),
+				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+					return new != "" && old == d.Get("user_data")
+				},
+			},
 			"status": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -272,6 +282,11 @@ func resourceServerscomCloudComputingInstanceCreate(d *schema.ResourceData, meta
 	if v, ok := d.GetOk("ssh_key_fingerprint"); ok {
 		sshKeyFp := v.(string)
 		input.SSHKeyFingerprint = &sshKeyFp
+	}
+
+	if v, ok := d.GetOk("user_data"); ok {
+		userData := v.(string)
+		input.UserData = &userData
 	}
 
 	ctx := context.TODO()
