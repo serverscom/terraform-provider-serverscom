@@ -79,11 +79,35 @@ The following arguments are supported:
 - `ipv6` - (Optional, bool) Is IPv6 enabled. Defaults to `false`.
 - `slot` - (Optional, list) List of drive slots. Slots used in partioning have to be listed.
 - `slot.0.position` - (Required, int) Slot position.
-- `slot.0.drive_model_name` - (Optional, string) The name of drive model to place in the slot.
+- `slot.0.drive_model` - (Optional, string) The name of drive model to place in the slot.
 - `layout` - (Optional, list) List of layouts.
 - `layout.0.slot_positions` - (Required, list) List of slots which should be used in the layout.
 - `layout.0.raid` - (Optional, int) RAID level for the layout.
 - `layout.0.partition` - (Required, list) List of partitions for the layout.
 - `layout.0.partition.0.target` - (Required, string) Target/Mount point for the partition.
 - `layout.0.partition.0.size` - (Required, int) Size of the partition (MB).
-- `layout.0.partition.0.fill` - (Optional, bool) Autofill partition by all unused space. When set to `true`
+- `layout.0.partition.0.fill` - (Optional, bool) Autofill partition by all unused space. When set to `true`, the partition will use all remaining available space.
+- `layout.0.partition.0.fs` - (Optional, string) Filesystem type for the partition.
+- `labels` - (Optional, map) A map of labels assigned to the dedicated server.
+
+## Attributes Reference
+
+The following attributes are exported:
+
+- `id` - (string) Unique identifier of the dedicated server.
+- `hostname` - (string) Name of the dedicated server.
+- `location` - (string) Location code of the dedicated server.
+- `server_model` - (string) Name of the dedicated server model.
+- `configuration` - (string) Configuration description of the dedicated server.
+- `private_ipv4_address` - (string) Private IPv4 address.
+- `public_ipv4_address` - (string) Public IPv4 address.
+- `status` - (string) Status of the dedicated server.
+- `labels` - (map) A map of labels assigned to the dedicated server.
+
+## Import
+
+Dedicated servers can be imported using the dedicated server `id`:
+
+```bash
+terraform import serverscom_dedicated_server.node_1 <id>
+```

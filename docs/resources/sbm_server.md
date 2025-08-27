@@ -33,4 +33,29 @@ The following arguments are supported:
 - `ssh_key_fingerprints` - (Optional, list) An SSH key fingerprint.
 - `user_data` - (Optional, string) A user data string for the SBM server.
 - `private_ipv4_network_id` - (Optional, string) An ID of a private IPv4 network.
+- `private_ipv4_address` - (Optional, string) A private IPv4 address for the SBM server.
 - `public_ipv4_network_id` - (Optional, string) An ID of a public IPv4 network.
+- `public_ipv4_address` - (Optional, string) A public IPv4 address for the SBM server.
+- `labels` - (Optional, map) A map of labels assigned to the SBM server.
+
+## Attributes Reference
+
+The following attributes are exported:
+
+- `id` - (string) Unique identifier of the SBM server.
+- `hostname` - (string) A name of the SBM server.
+- `location` - (string) A location code of the SBM server.
+- `flavor` - (string) A flavor of an SBM server.
+- `operating_system` - (string) A name of an operating system.
+- `private_ipv4_address` - (string) A private IPv4 address for the SBM server.
+- `public_ipv4_address` - (string) A public IPv4 address for the SBM server.
+- `status` - (string) Status of the SBM server.
+- `labels` - (map) A map of labels assigned to the SBM server.
+
+## Import
+
+SBM servers can be imported using the SBM server `id`:
+
+```bash
+terraform import serverscom_sbm_server.node_01 <id>
+```

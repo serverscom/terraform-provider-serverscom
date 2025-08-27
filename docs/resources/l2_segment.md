@@ -36,8 +36,9 @@ The following arguments are supported:
 - `type` - (Required, string) Type of the L2 segment.
 - `location_group` - (Required, string) Location group code.
 - `member` - (Required, list) List of the L2 segment members.
-- `member.0.id` - (Required, int) ID of the dedicated server.
+- `member.0.id` - (Required, string) ID of the dedicated server.
 - `member.0.mode` - (Required, string) Membership mode of the dedicated server.
+- `labels` - (Optional, map) A map of labels assigned to the L2 segment.
 
 ## Attributes Reference
 
@@ -48,15 +49,16 @@ The following attributes are exported:
 - `type` - (string) Type of the L2 segment.
 - `location_group` - (string) Location group code.
 - `member` - (list) List of the L2 segment members.
-- `member.0.id` - (int) ID of the dedicated server.
+- `member.0.id` - (string) ID of the dedicated server.
 - `member.0.mode` - (string) Membership mode of the dedicated server.
 - `member.0.status` - (string) Status of the membership.
-- `member.0.vlan` - (int) VLAN number of the member.
+- `member.0.vlan` - (string) VLAN number of the member.
 - `member.0.created_at` - (string) Member created at.
 - `member.0.updated_at` - (string) Member updated at.
 - `status` - (string) Status of the L2 segment.
 - `created_at` - (string) L2 segment created at.
 - `updated_at` - (string) L2 segment updated at.
+- `labels` - (map) A map of labels assigned to the L2 segment.
 
 ## Import
 

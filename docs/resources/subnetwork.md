@@ -33,8 +33,9 @@ resource "serverscom_subnetwork" "private_network" {
 The following arguments are supported:
 
 - `network_pool_id` - (Required, string) ID of the Network Pool.
+- `title` - (Optional, string) Title of the Subnetwork.
 - `cidr` - (Optional, string) CIDR of the Subnetwork.
-- `mask` - (Optional, string) Mask of the Subnetwork.
+- `mask` - (Optional, int) Mask of the Subnetwork.
 
 ## Attributes Reference
 

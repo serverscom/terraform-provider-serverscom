@@ -23,6 +23,7 @@ The following arguments are supported:
 
 - `name` - (Required, string) Name of the SSH key.
 - `public_key` - (Required, string) Public key. If this is a file, it can be read using the file interpolation function.
+- `labels` - (Optional, map) A map of labels assigned to the SSH key.
 
 ## Attributes Reference
 
@@ -32,6 +33,7 @@ The following attributes are exported:
 - `name` - (string) Name of the SSH key.
 - `public_key` - (string) Public part of the SSH key.
 - `fingerprint` - (string) Fingerprint of the SSH key.
+- `labels` - (map) A map of labels assigned to the SSH key.
 
 ## Import
 

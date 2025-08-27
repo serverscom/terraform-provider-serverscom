@@ -38,6 +38,8 @@ The following arguments are supported:
 - `ipv6_enabled` - (Optional, bool) Is IPv6 enabled. Defaults to `false`.
 - `backup_copies` - (Optional, int) Count of backup copies. Defaults to `0`.
 - `ssh_key_fingerprint` - (Optional, string) SSH key fingerprint.
+- `user_data` - (Optional, string) A string of the desired user data for the cloud computing instance.
+- `labels` - (Optional, map) A map of labels assigned to the cloud computing instance.
 
 ## Attributes Reference
 
@@ -56,6 +58,7 @@ The following attributes are exported:
 - `public_ipv4_address` - (string) Public IPv4 address.
 - `public_ipv6_address` - (string) Public IPv6 address.
 - `openstack_uuid` - (string) OpenStack unique identifier (UUID) of the cloud computing instance.
+- `labels` - (map) A map of labels assigned to the cloud computing instance.
 
 ## Import
 
