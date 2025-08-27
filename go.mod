@@ -2,10 +2,12 @@ module github.com/serverscom/terraform-provider-serverscom
 
 go 1.23.0
 
+toolchain go1.24.6
+
 require (
 	github.com/hashicorp/golang-lru v1.0.2
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.36.1
-	github.com/serverscom/serverscom-go-client v1.0.17
+	github.com/serverscom/serverscom-go-client v1.0.19
 )
 
 require (

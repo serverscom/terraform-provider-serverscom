@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	scgo "github.com/serverscom/serverscom-go-client/pkg"
@@ -26,7 +26,7 @@ func resourceServerscomL2Segment() *schema.Resource {
 		Delete: resourceServerscomL2SegmentDelete,
 		Create: resourceServerscomL2SegmentCreate,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Timeouts: &schema.ResourceTimeout{
@@ -100,6 +100,13 @@ func resourceServerscomL2Segment() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"labels": {
+				Type:     schema.TypeMap,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
@@ -133,6 +140,7 @@ func resourceServerscomL2SegmentRead(d *schema.ResourceData, meta interface{}) e
 	d.Set("status", l2Segment.Status)
 	d.Set("created_at", l2Segment.Created.String())
 	d.Set("updated_at", l2Segment.Updated.String())
+	d.Set("labels", l2Segment.Labels)
 
 	if l2Segment.Status != "active" {
 		return nil
@@ -162,12 +170,23 @@ func resourceServerscomL2SegmentUpdate(d *schema.ResourceData, meta interface{})
 		input.Members = getSchemaMembers(d)
 	}
 
+	if d.HasChange("labels") {
+		if labelsRaw, ok := d.GetOk("labels"); ok {
+			labels := labelsRaw.(map[string]interface{})
+			stringLabels := make(map[string]string)
+			for k, v := range labels {
+				stringLabels[k] = v.(string)
+			}
+			input.Labels = stringLabels
+		}
+	}
+
 	if d.HasChanges("name", "member") {
 		client := meta.(*scgo.Client)
 
 		ctx := context.TODO()
 
-		if _, err := waitForL2SegmentAttribute(d, "active", []string{"pending"}, "status", meta, schema.TimeoutUpdate); err != nil {
+		if _, err := waitForL2SegmentAttribute(ctx, d, "active", []string{"pending"}, "status", meta, schema.TimeoutUpdate); err != nil {
 			return err
 		}
 
@@ -175,7 +194,7 @@ func resourceServerscomL2SegmentUpdate(d *schema.ResourceData, meta interface{})
 			return err
 		}
 
-		if _, err := waitForL2SegmentAttribute(d, "active", []string{"pending"}, "status", meta, schema.TimeoutUpdate); err != nil {
+		if _, err := waitForL2SegmentAttribute(ctx, d, "active", []string{"pending"}, "status", meta, schema.TimeoutUpdate); err != nil {
 			return err
 		}
 
@@ -209,7 +228,7 @@ func resourceServerscomL2SegmentDelete(d *schema.ResourceData, meta interface{})
 	}
 
 	if l2Segment.Status == "pending" {
-		if _, err := waitForL2SegmentAttribute(d, "active", []string{"pending"}, "status", meta, schema.TimeoutDelete); err != nil {
+		if _, err := waitForL2SegmentAttribute(ctx, d, "active", []string{"pending"}, "status", meta, schema.TimeoutDelete); err != nil {
 			return err
 		}
 	}
@@ -236,6 +255,15 @@ func resourceServerscomL2SegmentCreate(d *schema.ResourceData, meta interface{})
 	input.LocationGroupID = locationGroup.ID
 	input.Members = getSchemaMembers(d)
 
+	if labelsRaw, ok := d.GetOk("labels"); ok {
+		labels := labelsRaw.(map[string]interface{})
+		stringLabels := make(map[string]string)
+		for k, v := range labels {
+			stringLabels[k] = v.(string)
+		}
+		input.Labels = stringLabels
+	}
+
 	l2Segment, err := client.L2Segments.Create(ctx, input)
 	if err != nil {
 		return err
@@ -243,11 +271,11 @@ func resourceServerscomL2SegmentCreate(d *schema.ResourceData, meta interface{})
 
 	d.SetId(l2Segment.ID)
 
-	if _, err := waitForL2SegmentAttribute(d, "active", []string{"pending"}, "status", meta, schema.TimeoutCreate); err != nil {
+	if _, err := waitForL2SegmentAttribute(ctx, d, "active", []string{"pending"}, "status", meta, schema.TimeoutCreate); err != nil {
 		return err
 	}
 
-	return resourceServerscomL2SegmentRead(d, meta)
+	return nil
 }
 
 func getMembers(members []scgo.L2Member) []map[string]interface{} {
@@ -269,13 +297,13 @@ func getMembers(members []scgo.L2Member) []map[string]interface{} {
 	return l2Members
 }
 
-func waitForL2SegmentAttribute(d *schema.ResourceData, target string, pending []string, attribute string, meta interface{}, timeoutKey string) (interface{}, error) {
+func waitForL2SegmentAttribute(ctx context.Context, d *schema.ResourceData, target string, pending []string, attribute string, meta interface{}, timeoutKey string) (interface{}, error) {
 	log.Printf(
 		"[INFO] Waiting for l2 segment (%s) to have %s of %s",
 		d.Id(), attribute, target,
 	)
 
-	stateConf := &resource.StateChangeConf{
+	stateConf := &retry.StateChangeConf{
 		Pending:    pending,
 		Target:     []string{target},
 		Refresh:    newL2SegmentStateRefreshFunc(d, attribute, meta),
@@ -284,13 +312,10 @@ func waitForL2SegmentAttribute(d *schema.ResourceData, target string, pending []
 		MinTimeout: 15 * time.Second,
 	}
 
-	return stateConf.WaitForState()
+	return stateConf.WaitForStateContext(ctx)
 }
 
-func newL2SegmentStateRefreshFunc(d *schema.ResourceData, attribute string, meta interface{}) resource.StateRefreshFunc {
-	client := meta.(*scgo.Client)
-	ctx := context.TODO()
-
+func newL2SegmentStateRefreshFunc(d *schema.ResourceData, attribute string, meta interface{}) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		err := resourceServerscomL2SegmentRead(d, meta)
 		if err != nil {
@@ -298,18 +323,12 @@ func newL2SegmentStateRefreshFunc(d *schema.ResourceData, attribute string, meta
 		}
 
 		// See if we can access our attribute
-		if attr, ok := d.GetOkExists(attribute); ok {
-			l2Segment, err := client.L2Segments.Get(ctx, d.Id())
-
-			if err != nil {
-				return nil, "", fmt.Errorf("Error retrieving l2 segment: %s", err)
-			}
-
+		if attr, ok := d.GetOk(attribute); ok {
 			switch attr.(type) {
 			case bool:
-				return &l2Segment, strconv.FormatBool(attr.(bool)), nil
+				return d, strconv.FormatBool(attr.(bool)), nil
 			default:
-				return &l2Segment, attr.(string), nil
+				return d, attr.(string), nil
 			}
 		}
 
