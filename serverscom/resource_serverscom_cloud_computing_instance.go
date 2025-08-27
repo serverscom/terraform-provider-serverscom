@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	scgo "github.com/serverscom/serverscom-go-client/pkg"
@@ -24,7 +24,7 @@ func resourceServerscomCloudComputingInstance() *schema.Resource {
 		Delete: resourceServerscomCloudComputingInstanceDelete,
 		Create: resourceServerscomCloudComputingInstanceCreate,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Timeouts: &schema.ResourceTimeout{
@@ -79,6 +79,16 @@ func resourceServerscomCloudComputingInstance() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
+			"user_data": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				ValidateFunc: validation.NoZeroValues,
+				StateFunc:    HashStringStateFunc(),
+				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+					return new != "" && old == d.Get("user_data")
+				},
+			},
 			"status": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -91,13 +101,20 @@ func resourceServerscomCloudComputingInstance() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"private_ipv6_address": {
+			"public_ipv6_address": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
 			"openstack_uuid": {
 				Type:     schema.TypeString,
 				Computed: true,
+			},
+			"labels": {
+				Type:     schema.TypeMap,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
 			},
 		},
 	}
@@ -123,6 +140,7 @@ func resourceServerscomCloudComputingInstanceRead(d *schema.ResourceData, meta i
 	d.Set("ipv6_enabled", cloudInstance.PublicIPv6Address)
 	d.Set("gpn_enabled", cloudInstance.GPNEnabled)
 	d.Set("openstack_uuid", cloudInstance.OpenstackUUID)
+	d.Set("labels", cloudInstance.Labels)
 
 	if cloudInstance.PublicIPv4Address != nil {
 		d.SetConnInfo(map[string]string{
@@ -162,6 +180,18 @@ func resourceServerscomCloudComputingInstanceUpdate(d *schema.ResourceData, meta
 		hasChanges = true
 		gpnEnabled := d.Get("gpn_enabled").(bool)
 		updateInput.GPNEnabled = &gpnEnabled
+	}
+
+	if d.HasChange("labels") {
+		hasChanges = true
+		if labelsRaw, ok := d.GetOk("labels"); ok {
+			labels := labelsRaw.(map[string]interface{})
+			stringLabels := make(map[string]string)
+			for k, v := range labels {
+				stringLabels[k] = v.(string)
+			}
+			updateInput.Labels = stringLabels
+		}
 	}
 
 	ctx := context.TODO()
@@ -274,6 +304,19 @@ func resourceServerscomCloudComputingInstanceCreate(d *schema.ResourceData, meta
 		input.SSHKeyFingerprint = &sshKeyFp
 	}
 
+	if labelsRaw, ok := d.GetOk("labels"); ok {
+		labels := labelsRaw.(map[string]interface{})
+		stringLabels := make(map[string]string)
+		for k, v := range labels {
+			stringLabels[k] = v.(string)
+		}
+		input.Labels = stringLabels
+    
+	if v, ok := d.GetOk("user_data"); ok {
+		userData := v.(string)
+		input.UserData = &userData
+	}
+
 	ctx := context.TODO()
 
 	cloudInstance, err := client.CloudComputingInstances.Create(ctx, input)
@@ -283,21 +326,22 @@ func resourceServerscomCloudComputingInstanceCreate(d *schema.ResourceData, meta
 
 	d.SetId(cloudInstance.ID)
 
+
 	_, err = waitForCloudComputingInstanceAttribute(d, "ACTIVE", []string{"PROVISIONING", "BUILDING", "REBOOTING"}, "status", meta, schema.TimeoutCreate)
 	if err != nil {
 		return fmt.Errorf("Error waiting for cloud computing instance (%s) to become active: %s", d.Id(), err)
 	}
 
-	return resourceServerscomCloudComputingInstanceRead(d, meta)
+	return nil
 }
 
-func waitForCloudComputingInstanceAttribute(d *schema.ResourceData, target string, pending []string, attribute string, meta interface{}, timeoutKey string) (interface{}, error) {
+func waitForCloudComputingInstanceAttribute(ctx context.Context, d *schema.ResourceData, target string, pending []string, attribute string, meta interface{}, timeoutKey string) (interface{}, error) {
 	log.Printf(
 		"[INFO] Waiting for cloud computing instance (%s) to have %s of %s",
 		d.Id(), attribute, target,
 	)
 
-	stateConf := &resource.StateChangeConf{
+	stateConf := &retry.StateChangeConf{
 		Pending:    pending,
 		Target:     []string{target},
 		Refresh:    newCloudComputingInstanceStateRefreshFunc(d, attribute, meta),
@@ -306,13 +350,10 @@ func waitForCloudComputingInstanceAttribute(d *schema.ResourceData, target strin
 		MinTimeout: 3 * time.Second,
 	}
 
-	return stateConf.WaitForState()
+	return stateConf.WaitForStateContext(ctx)
 }
 
-func newCloudComputingInstanceStateRefreshFunc(d *schema.ResourceData, attribute string, meta interface{}) resource.StateRefreshFunc {
-	client := meta.(*scgo.Client)
-	ctx := context.TODO()
-
+func newCloudComputingInstanceStateRefreshFunc(d *schema.ResourceData, attribute string, meta interface{}) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		err := resourceServerscomCloudComputingInstanceRead(d, meta)
 		if err != nil {
@@ -320,18 +361,12 @@ func newCloudComputingInstanceStateRefreshFunc(d *schema.ResourceData, attribute
 		}
 
 		// See if we can access our attribute
-		if attr, ok := d.GetOkExists(attribute); ok {
-			cloudInstance, err := client.CloudComputingInstances.Get(ctx, d.Id())
-
-			if err != nil {
-				return nil, "", fmt.Errorf("Error retrieving cloud instance: %s", err)
-			}
-
+		if attr, ok := d.GetOk(attribute); ok {
 			switch attr.(type) {
 			case bool:
-				return &cloudInstance, strconv.FormatBool(attr.(bool)), nil
+				return d, strconv.FormatBool(attr.(bool)), nil
 			default:
-				return &cloudInstance, attr.(string), nil
+				return d, attr.(string), nil
 			}
 		}
 
