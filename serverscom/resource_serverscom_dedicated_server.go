@@ -189,6 +189,13 @@ func resourceServerscomDedicatedServer() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"labels": {
+				Type:     schema.TypeMap,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
@@ -228,6 +235,7 @@ func resourceServerscomDedicatedServerRead(d *schema.ResourceData, meta interfac
 	d.Set("operating_system", dedicatedServer.ConfigurationDetails.OperatingSystemFullName)
 	d.Set("ram_size", dedicatedServer.ConfigurationDetails.RAMSize)
 	d.Set("location", dedicatedServer.LocationCode)
+	d.Set("labels", dedicatedServer.Labels)
 
 	if dedicatedServer.Status != "active" {
 		return nil
@@ -260,7 +268,33 @@ func resourceServerscomDedicatedServerRead(d *schema.ResourceData, meta interfac
 }
 
 func resourceServerscomDedicatedServerUpdate(d *schema.ResourceData, meta interface{}) error {
-	return resourceServerscomDedicatedServerRead(d, meta)
+	input := scgo.DedicatedServerUpdateInput{}
+
+	hasChanges := false
+	if d.HasChange("labels") {
+		hasChanges = true
+		if labelsRaw, ok := d.GetOk("labels"); ok {
+			labels := labelsRaw.(map[string]interface{})
+			stringLabels := make(map[string]string)
+			for k, v := range labels {
+				stringLabels[k] = v.(string)
+			}
+			input.Labels = stringLabels
+		}
+	}
+
+	if hasChanges {
+		client := meta.(*scgo.Client)
+		ctx := context.TODO()
+
+		if _, err := client.Hosts.UpdateDedicatedServer(ctx, d.Id(), input); err != nil {
+			return err
+		}
+
+		return resourceServerscomDedicatedServerRead(d, meta)
+	}
+
+	return nil
 }
 
 func resourceServerscomDedicatedServerDelete(d *schema.ResourceData, meta interface{}) error {
@@ -335,6 +369,14 @@ func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta interf
 			PublicIPv4NetworkID:  publicIpv4NetworkId,
 			PrivateIPv4NetworkID: privateIpv4NetworkId,
 		},
+	}
+	if labelsRaw, ok := d.GetOk("labels"); ok {
+		labels := labelsRaw.(map[string]interface{})
+		stringLabels := make(map[string]string)
+		for k, v := range labels {
+			stringLabels[k] = v.(string)
+		}
+		input.Hosts[0].Labels = stringLabels
 	}
 
 	location, err = getLocation(d.Get("location").(string))

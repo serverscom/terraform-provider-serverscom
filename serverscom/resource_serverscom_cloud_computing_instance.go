@@ -109,6 +109,13 @@ func resourceServerscomCloudComputingInstance() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"labels": {
+				Type:     schema.TypeMap,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
@@ -133,6 +140,7 @@ func resourceServerscomCloudComputingInstanceRead(d *schema.ResourceData, meta i
 	d.Set("ipv6_enabled", cloudInstance.PublicIPv6Address)
 	d.Set("gpn_enabled", cloudInstance.GPNEnabled)
 	d.Set("openstack_uuid", cloudInstance.OpenstackUUID)
+	d.Set("labels", cloudInstance.Labels)
 
 	if cloudInstance.PublicIPv4Address != nil {
 		d.SetConnInfo(map[string]string{
@@ -172,6 +180,18 @@ func resourceServerscomCloudComputingInstanceUpdate(d *schema.ResourceData, meta
 		hasChanges = true
 		gpnEnabled := d.Get("gpn_enabled").(bool)
 		updateInput.GPNEnabled = &gpnEnabled
+	}
+
+	if d.HasChange("labels") {
+		hasChanges = true
+		if labelsRaw, ok := d.GetOk("labels"); ok {
+			labels := labelsRaw.(map[string]interface{})
+			stringLabels := make(map[string]string)
+			for k, v := range labels {
+				stringLabels[k] = v.(string)
+			}
+			updateInput.Labels = stringLabels
+		}
 	}
 
 	ctx := context.TODO()
@@ -284,6 +304,14 @@ func resourceServerscomCloudComputingInstanceCreate(d *schema.ResourceData, meta
 		input.SSHKeyFingerprint = &sshKeyFp
 	}
 
+	if labelsRaw, ok := d.GetOk("labels"); ok {
+		labels := labelsRaw.(map[string]interface{})
+		stringLabels := make(map[string]string)
+		for k, v := range labels {
+			stringLabels[k] = v.(string)
+		}
+		input.Labels = stringLabels
+    
 	if v, ok := d.GetOk("user_data"); ok {
 		userData := v.(string)
 		input.UserData = &userData
