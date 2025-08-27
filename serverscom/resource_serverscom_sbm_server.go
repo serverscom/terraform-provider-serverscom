@@ -98,6 +98,13 @@ func resourceServerscomSBM() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"labels": {
+				Type:     schema.TypeMap,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
@@ -125,6 +132,7 @@ func resourceServerscomSBMRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("location", sbm.LocationCode)
 	d.Set("private_ipv4_address", sbm.PrivateIPv4Address)
 	d.Set("public_ipv4_address", sbm.PublicIPv4Address)
+	d.Set("labels", sbm.Labels)
 
 	if sbm.Status != "active" {
 		return nil
@@ -134,7 +142,33 @@ func resourceServerscomSBMRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceServerscomSBMUpdate(d *schema.ResourceData, meta interface{}) error {
-	return resourceServerscomSBMRead(d, meta)
+	input := scgo.SBMServerUpdateInput{}
+
+	hasChanges := false
+	if d.HasChange("labels") {
+		hasChanges = true
+		if labelsRaw, ok := d.GetOk("labels"); ok {
+			labels := labelsRaw.(map[string]interface{})
+			stringLabels := make(map[string]string)
+			for k, v := range labels {
+				stringLabels[k] = v.(string)
+			}
+			input.Labels = stringLabels
+		}
+	}
+
+	if hasChanges {
+		client := meta.(*scgo.Client)
+		ctx := context.TODO()
+
+		if _, err := client.Hosts.UpdateSBMServer(ctx, d.Id(), input); err != nil {
+			return err
+		}
+
+		return resourceServerscomSBMRead(d, meta)
+	}
+
+	return nil
 }
 
 func resourceServerscomSBMDelete(d *schema.ResourceData, meta interface{}) error {
@@ -192,6 +226,14 @@ func resourceServerscomSBMCreate(d *schema.ResourceData, meta interface{}) error
 			PublicIPv4NetworkID:  publicIpv4NetworkId,
 			PrivateIPv4NetworkID: privateIpv4NetworkId,
 		},
+	}
+	if labelsRaw, ok := d.GetOk("labels"); ok {
+		labels := labelsRaw.(map[string]interface{})
+		stringLabels := make(map[string]string)
+		for k, v := range labels {
+			stringLabels[k] = v.(string)
+		}
+		input.Hosts[0].Labels = stringLabels
 	}
 
 	location, err := getLocation(d.Get("location").(string))
@@ -256,7 +298,7 @@ func resourceServerscomSBMCreate(d *schema.ResourceData, meta interface{}) error
 		return fmt.Errorf("Error waiting for SBM server (%s) to become ready: %s", d.Id(), err)
 	}
 
-	return resourceServerscomSBMRead(d, meta)
+	return nil
 }
 
 func waitForSBMAttribute(ctx context.Context, d *schema.ResourceData, target string, pending []string, attribute string, meta interface{}, timeoutKey string) (interface{}, error) {
