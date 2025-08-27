@@ -298,7 +298,7 @@ func resourceServerscomSBMCreate(d *schema.ResourceData, meta interface{}) error
 		return fmt.Errorf("Error waiting for SBM server (%s) to become ready: %s", d.Id(), err)
 	}
 
-	return resourceServerscomSBMRead(d, meta)
+	return nil
 }
 
 func waitForSBMAttribute(ctx context.Context, d *schema.ResourceData, target string, pending []string, attribute string, meta interface{}, timeoutKey string) (interface{}, error) {
