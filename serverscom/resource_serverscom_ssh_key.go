@@ -18,7 +18,7 @@ func resourceServerscomSSHKey() *schema.Resource {
 		Delete: resourceServerscomSSHKeyDelete,
 		Create: resourceServerscomSSHKeyCreate,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		SchemaVersion: 1,
@@ -40,6 +40,13 @@ func resourceServerscomSSHKey() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"labels": {
+				Type:     schema.TypeMap,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
@@ -55,6 +62,7 @@ func resourceServerscomSSHKeyRead(d *schema.ResourceData, meta interface{}) erro
 
 	d.Set("name", sshKey.Name)
 	d.Set("fingerprint", sshKey.Fingerprint)
+	d.Set("labels", sshKey.Labels)
 
 	return nil
 }
@@ -74,6 +82,17 @@ func resourceServerscomSSHKeyUpdate(d *schema.ResourceData, meta interface{}) er
 
 	input := scgo.SSHKeyUpdateInput{}
 	input.Name = newName
+
+	if d.HasChange("labels") {
+		if labelsRaw, ok := d.GetOk("labels"); ok {
+			labels := labelsRaw.(map[string]interface{})
+			stringLabels := make(map[string]string)
+			for k, v := range labels {
+				stringLabels[k] = v.(string)
+			}
+			input.Labels = stringLabels
+		}
+	}
 
 	if _, err := client.SSHKeys.Update(ctx, d.Id(), input); err != nil {
 		return err
@@ -108,6 +127,15 @@ func resourceServerscomSSHKeyCreate(d *schema.ResourceData, meta interface{}) er
 	input := scgo.SSHKeyCreateInput{}
 	input.PublicKey = d.Get("public_key").(string)
 	input.Name = d.Get("name").(string)
+
+	if labelsRaw, ok := d.GetOk("labels"); ok {
+		labels := labelsRaw.(map[string]interface{})
+		stringLabels := make(map[string]string)
+		for k, v := range labels {
+			stringLabels[k] = v.(string)
+		}
+		input.Labels = stringLabels
+	}
 
 	sshKey, err := client.SSHKeys.Create(ctx, input)
 	if err != nil {
