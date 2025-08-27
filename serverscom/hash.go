@@ -1,8 +1,11 @@
 package serverscom
 
 import (
+	"crypto/md5"
 	"crypto/sha1"
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"hash/crc32"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -37,4 +40,14 @@ func SDKHashString(s string) int {
 	}
 	// v == MinInt
 	return 0
+}
+
+// hashFilter returns md5 hash of filter
+func hashFilter(filter map[string]any) (string, error) {
+	filterBytes, err := json.Marshal(filter)
+	if err != nil {
+		return "", fmt.Errorf("error marshaling filter: %s", err)
+	}
+	hash := md5.Sum(filterBytes)
+	return hex.EncodeToString(hash[:]), nil
 }
