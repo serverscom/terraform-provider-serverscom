@@ -311,7 +311,8 @@ func resourceServerscomCloudComputingInstanceCreate(d *schema.ResourceData, meta
 			stringLabels[k] = v.(string)
 		}
 		input.Labels = stringLabels
-    
+	}
+
 	if v, ok := d.GetOk("user_data"); ok {
 		userData := v.(string)
 		input.UserData = &userData
@@ -326,8 +327,7 @@ func resourceServerscomCloudComputingInstanceCreate(d *schema.ResourceData, meta
 
 	d.SetId(cloudInstance.ID)
 
-
-	_, err = waitForCloudComputingInstanceAttribute(d, "ACTIVE", []string{"PROVISIONING", "BUILDING", "REBOOTING"}, "status", meta, schema.TimeoutCreate)
+	_, err = waitForCloudComputingInstanceAttribute(ctx, d, "ACTIVE", []string{"PROVISIONING", "BUILDING", "REBOOTING"}, "status", meta, schema.TimeoutCreate)
 	if err != nil {
 		return fmt.Errorf("Error waiting for cloud computing instance (%s) to become active: %s", d.Id(), err)
 	}
