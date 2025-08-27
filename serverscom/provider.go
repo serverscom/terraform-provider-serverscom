@@ -22,6 +22,7 @@ func Provider() *schema.Provider {
 		DataSourcesMap: map[string]*schema.Resource{
 			"serverscom_network_pool":       datasourceServerscomNetworkPool(),
 			"serverscom_dedicated_server":   dataSourceServerscomDedicatedServer(),
+      "serverscom_sbm_server":         dataSourceServerscomSBMServer(),
 			"serverscom_l2_segment":         dataSourceServerscomL2Segment(),
 			"serverscom_l2_segment_members": dataSourceServerscomL2SegmentMembers(),
 		},

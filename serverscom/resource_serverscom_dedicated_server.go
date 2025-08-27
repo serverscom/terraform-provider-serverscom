@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	scgo "github.com/serverscom/serverscom-go-client/pkg"
@@ -189,6 +189,13 @@ func resourceServerscomDedicatedServer() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"labels": {
+				Type:     schema.TypeMap,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
@@ -228,6 +235,7 @@ func resourceServerscomDedicatedServerRead(d *schema.ResourceData, meta interfac
 	d.Set("operating_system", dedicatedServer.ConfigurationDetails.OperatingSystemFullName)
 	d.Set("ram_size", dedicatedServer.ConfigurationDetails.RAMSize)
 	d.Set("location", dedicatedServer.LocationCode)
+	d.Set("labels", dedicatedServer.Labels)
 
 	if dedicatedServer.Status != "active" {
 		return nil
@@ -260,7 +268,33 @@ func resourceServerscomDedicatedServerRead(d *schema.ResourceData, meta interfac
 }
 
 func resourceServerscomDedicatedServerUpdate(d *schema.ResourceData, meta interface{}) error {
-	return resourceServerscomDedicatedServerRead(d, meta)
+	input := scgo.DedicatedServerUpdateInput{}
+
+	hasChanges := false
+	if d.HasChange("labels") {
+		hasChanges = true
+		if labelsRaw, ok := d.GetOk("labels"); ok {
+			labels := labelsRaw.(map[string]interface{})
+			stringLabels := make(map[string]string)
+			for k, v := range labels {
+				stringLabels[k] = v.(string)
+			}
+			input.Labels = stringLabels
+		}
+	}
+
+	if hasChanges {
+		client := meta.(*scgo.Client)
+		ctx := context.TODO()
+
+		if _, err := client.Hosts.UpdateDedicatedServer(ctx, d.Id(), input); err != nil {
+			return err
+		}
+
+		return resourceServerscomDedicatedServerRead(d, meta)
+	}
+
+	return nil
 }
 
 func resourceServerscomDedicatedServerDelete(d *schema.ResourceData, meta interface{}) error {
@@ -286,7 +320,7 @@ func resourceServerscomDedicatedServerDelete(d *schema.ResourceData, meta interf
 	}
 
 	if dedicatedServer.Status == "pending" || dedicatedServer.Status == "init" {
-		_, err = waitForDedicatedServerAttribute(d, "active", []string{"init", "pending"}, "status", meta, schema.TimeoutDelete)
+		_, err = waitForDedicatedServerAttribute(ctx, d, "active", []string{"init", "pending"}, "status", meta, schema.TimeoutDelete)
 		if err != nil {
 			return fmt.Errorf("Error waiting for dedicated server (%s) to become ready: %s", d.Id(), err)
 		}
@@ -335,6 +369,14 @@ func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta interf
 			PublicIPv4NetworkID:  publicIpv4NetworkId,
 			PrivateIPv4NetworkID: privateIpv4NetworkId,
 		},
+	}
+	if labelsRaw, ok := d.GetOk("labels"); ok {
+		labels := labelsRaw.(map[string]interface{})
+		stringLabels := make(map[string]string)
+		for k, v := range labels {
+			stringLabels[k] = v.(string)
+		}
+		input.Hosts[0].Labels = stringLabels
 	}
 
 	location, err = getLocation(d.Get("location").(string))
@@ -451,12 +493,12 @@ func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta interf
 
 	d.SetId(id)
 
-	_, err = waitForDedicatedServerAttribute(d, "active", []string{"init", "pending"}, "status", meta, schema.TimeoutCreate)
+	_, err = waitForDedicatedServerAttribute(ctx, d, "active", []string{"init", "pending"}, "status", meta, schema.TimeoutCreate)
 	if err != nil {
 		return fmt.Errorf("Error waiting for dedicated server (%s) to become ready: %s", d.Id(), err)
 	}
 
-	return resourceServerscomDedicatedServerRead(d, meta)
+	return nil
 }
 
 func getDriveSlots(slots []scgo.HostDriveSlot) []map[string]interface{} {
@@ -678,29 +720,25 @@ func verifyLayouts(layouts []scgo.DedicatedServerLayoutInput) error {
 	return nil
 }
 
-func waitForDedicatedServerAttribute(d *schema.ResourceData, target string, pending []string, attribute string, meta interface{}, timeoutKey string) (interface{}, error) {
+func waitForDedicatedServerAttribute(ctx context.Context, d *schema.ResourceData, target string, pending []string, attribute string, meta interface{}, timeoutKey string) (interface{}, error) {
 	log.Printf(
 		"[INFO] Waiting for dedicated server (%s) to have %s of %s",
 		d.Id(), attribute, target,
 	)
 
-	stateConf := &resource.StateChangeConf{
+	stateConf := &retry.StateChangeConf{
 		Pending:      pending,
 		Target:       []string{target},
 		Refresh:      newDedicatedServerStateRefreshFunc(d, attribute, meta),
 		Timeout:      d.Timeout(timeoutKey),
 		PollInterval: 1 * time.Minute,
 		Delay:        1 * time.Minute,
-		MinTimeout:   30 * time.Second,
 	}
 
-	return stateConf.WaitForState()
+	return stateConf.WaitForStateContext(ctx)
 }
 
-func newDedicatedServerStateRefreshFunc(d *schema.ResourceData, attribute string, meta interface{}) resource.StateRefreshFunc {
-	client := meta.(*scgo.Client)
-	ctx := context.TODO()
-
+func newDedicatedServerStateRefreshFunc(d *schema.ResourceData, attribute string, meta interface{}) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		err := resourceServerscomDedicatedServerRead(d, meta)
 		if err != nil {
@@ -708,18 +746,12 @@ func newDedicatedServerStateRefreshFunc(d *schema.ResourceData, attribute string
 		}
 
 		// See if we can access our attribute
-		if attr, ok := d.GetOkExists(attribute); ok {
-			dedicatedServer, err := client.Hosts.GetDedicatedServer(ctx, d.Id())
-
-			if err != nil {
-				return nil, "", fmt.Errorf("Error retrieving dedicated server: %s", err)
-			}
-
+		if attr, ok := d.GetOk(attribute); ok {
 			switch attr.(type) {
 			case bool:
-				return &dedicatedServer, strconv.FormatBool(attr.(bool)), nil
+				return d, strconv.FormatBool(attr.(bool)), nil
 			default:
-				return &dedicatedServer, attr.(string), nil
+				return d, attr.(string), nil
 			}
 		}
 
