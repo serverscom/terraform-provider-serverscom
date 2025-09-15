@@ -136,8 +136,8 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 h1:n661drycOFuPLCN3Uc8sB6B/s6Z4t2xvBgU1htSHuq8=
 github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3/go.mod h1:A0bzQcvG0E7Rwjx0REVgAGH58e96+X0MeOfepqsbeW4=
-github.com/serverscom/serverscom-go-client v1.0.19 h1:hH49W89b758xQD0nKxJsFCQljF8nbDe5Q4yyeTEm0f0=
-github.com/serverscom/serverscom-go-client v1.0.19/go.mod h1:/Nf+XygKOxm19Sl2gvMzT55O4X+tWDkj/UM4mjzfKgM=
+github.com/serverscom/serverscom-go-client v1.0.21 h1:7L3Mo56M9yprj33iCxeP/iaxnQfCfiV0OwOqnCqIt1I=
+github.com/serverscom/serverscom-go-client v1.0.21/go.mod h1:/Nf+XygKOxm19Sl2gvMzT55O4X+tWDkj/UM4mjzfKgM=
 github.com/skeema/knownhosts v1.3.1 h1:X2osQ+RAjK76shCbvhHHHVl3ZlgDm8apHEHFqRjnBY8=
 github.com/skeema/knownhosts v1.3.1/go.mod h1:r7KTdC8l4uxWRyK2TpQZ/1o5HaSzh06ePQNxPwTcfiY=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
