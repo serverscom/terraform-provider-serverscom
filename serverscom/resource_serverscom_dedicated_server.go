@@ -283,6 +283,13 @@ func resourceServerscomDedicatedServerUpdate(d *schema.ResourceData, meta interf
 		}
 	}
 
+	if d.HasChange("hostname") {
+		hasChanges = true
+		if title, ok := d.GetOk("hostname"); ok {
+			input.Title = title.(string)
+		}
+	}
+
 	if hasChanges {
 		client := meta.(*scgo.Client)
 		ctx := context.TODO()
