@@ -327,7 +327,8 @@ func resourceServerscomCloudComputingInstanceCreate(d *schema.ResourceData, meta
 
 	d.SetId(cloudInstance.ID)
 
-	_, err = waitForCloudComputingInstanceAttribute(ctx, d, "ACTIVE", []string{"PROVISIONING", "BUILDING", "REBOOTING"}, "status", meta, schema.TimeoutCreate)
+	pending := []string{"CREATING", "PENDING", "PROVISIONING", "BUILDING", "REBOOTING"}
+	_, err = waitForCloudComputingInstanceAttribute(ctx, d, "ACTIVE", pending, "status", meta, schema.TimeoutCreate)
 	if err != nil {
 		return fmt.Errorf("Error waiting for cloud computing instance (%s) to become active: %s", d.Id(), err)
 	}
