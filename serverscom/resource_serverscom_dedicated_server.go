@@ -333,7 +333,7 @@ func resourceServerscomDedicatedServerDelete(d *schema.ResourceData, meta interf
 		}
 	}
 
-	if _, err := client.Hosts.ScheduleReleaseForDedicatedServer(ctx, d.Id()); err != nil {
+	if _, err := client.Hosts.ScheduleReleaseForDedicatedServer(ctx, d.Id(), scgo.ScheduleReleaseInput{}); err != nil {
 		return err
 	}
 
