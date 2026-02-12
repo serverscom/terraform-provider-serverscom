@@ -44,6 +44,11 @@ func Provider() *schema.Provider {
 			"serverscom_bandwidth_order_options":            dataSourceServerscomBandwidthOrderOptions(),
 			"serverscom_sbm_flavor_order_option":            dataSourceServerscomSbmFlavorOrderOption(),
 			"serverscom_sbm_flavor_order_options":           dataSourceServerscomSbmFlavorOrderOptions(),
+			"serverscom_rbs_volume":                         dataSourceServerscomRBSVolume(),
+			"serverscom_rbs_volumes":                        dataSourceServerscomRBSVolumes(),
+			"serverscom_rbs_volume_credentials":             dataSourceServerscomRBSVolumeCredentials(),
+			"serverscom_rbs_flavor_order_option":            dataSourceServerscomRBSFlavor(),
+			"serverscom_rbs_flavor_order_options":           dataSourceServerscomRBSFlavors(),
 		},
 		ResourcesMap: map[string]*schema.Resource{
 			"serverscom_dedicated_server":         resourceServerscomDedicatedServer(),
@@ -52,6 +57,7 @@ func Provider() *schema.Provider {
 			"serverscom_ssh_key":                  resourceServerscomSSHKey(),
 			"serverscom_subnetwork":               resourceServerscomSubnetwork(),
 			"serverscom_sbm_server":               resourceServerscomSBM(),
+			"serverscom_rbs_volume":               resourceServerscomRBSVolume(),
 		},
 		ConfigureFunc: providerConfigure,
 	}

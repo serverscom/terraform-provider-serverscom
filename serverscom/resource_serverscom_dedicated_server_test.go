@@ -34,7 +34,7 @@ func testSweepDededicatedServers(region string) error {
 	}
 
 	for _, host := range hosts {
-		_, err := client.Hosts.ScheduleReleaseForDedicatedServer(ctx, host.ID)
+		_, err := client.Hosts.ScheduleReleaseForDedicatedServer(ctx, host.ID, scgo.ScheduleReleaseInput{})
 		if err != nil {
 			return fmt.Errorf("Can't schedule release for dedicated server (%s): %s", host.ID, err)
 		}
