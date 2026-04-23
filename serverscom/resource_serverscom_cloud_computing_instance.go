@@ -64,6 +64,11 @@ func resourceServerscomCloudComputingInstance() *schema.Resource {
 				Optional: true,
 				Default:  false,
 			},
+			"ipv4_enabled": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
 			"ipv6_enabled": {
 				Type:     schema.TypeBool,
 				Optional: true,
