@@ -67,7 +67,7 @@ func resourceServerscomCloudComputingInstance() *schema.Resource {
 			"ipv4_enabled": {
 				Type:     schema.TypeBool,
 				Optional: true,
-				Default:  false,
+				Default:  true,
 			},
 			"ipv6_enabled": {
 				Type:     schema.TypeBool,
@@ -143,6 +143,7 @@ func resourceServerscomCloudComputingInstanceRead(d *schema.ResourceData, meta i
 	d.Set("public_ipv4_address", cloudInstance.PublicIPv4Address)
 	d.Set("public_ipv6_address", cloudInstance.PublicIPv6Address)
 	d.Set("ipv6_enabled", cloudInstance.PublicIPv6Address)
+	d.Set("ipv4_enabled", cloudInstance.PublicIPv4Address)
 	d.Set("gpn_enabled", cloudInstance.GPNEnabled)
 	d.Set("openstack_uuid", cloudInstance.OpenstackUUID)
 	d.Set("labels", cloudInstance.Labels)
