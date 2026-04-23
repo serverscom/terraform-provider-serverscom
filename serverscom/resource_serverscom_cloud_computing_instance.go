@@ -295,15 +295,11 @@ func resourceServerscomCloudComputingInstanceCreate(d *schema.ResourceData, meta
 		input.GPNEnabled = &gpnEnabled
 	}
 
-	if v, ok := d.GetOk("ipv4_enabled"); ok {
-		ipv4Enabled := v.(bool)
-		input.IPv4Enabled = &ipv4Enabled
-	}
+	ipv4Enabled := d.Get("ipv4_enabled").(bool)
+	input.IPv4Enabled = &ipv4Enabled
 
-	if v, ok := d.GetOk("ipv6_enabled"); ok {
-		ipv6Enabled := v.(bool)
-		input.IPv6Enabled = &ipv6Enabled
-	}
+	ipv6Enabled := d.Get("ipv6_enabled").(bool)
+	input.IPv6Enabled = &ipv6Enabled
 
 	if v, ok := d.GetOk("backup_copies"); ok {
 		backupCopies := v.(int)
