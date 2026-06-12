@@ -76,10 +76,6 @@ func resourceServerscomSSHKeyRead(ctx context.Context, d *schema.ResourceData, m
 func resourceServerscomSSHKeyUpdate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*scgo.Client)
 
-	if _, err := client.SSHKeys.Get(ctx, d.Id()); err != nil {
-		return diag.FromErr(err)
-	}
-
 	var newName string
 	if v, ok := d.GetOk("name"); ok {
 		newName = v.(string)
