@@ -101,7 +101,7 @@ func dataSourceServerscomUplinkModelOrderOptionsRead(d *schema.ResourceData, met
 
 	uplinkModels, err := collection.Collect(ctx)
 	if err != nil {
-		return fmt.Errorf("Error retrieving uplink model order options: %s", err.Error())
+		return fmt.Errorf("error retrieving uplink model order options: %s", err.Error())
 	}
 
 	uplinkList := make([]map[string]any, 0, len(uplinkModels))
@@ -117,7 +117,7 @@ func dataSourceServerscomUplinkModelOrderOptionsRead(d *schema.ResourceData, met
 
 	d.SetId(id)
 	if err := d.Set("uplink_models", uplinkList); err != nil {
-		return fmt.Errorf("Error setting uplink model order options: %s", err.Error())
+		return fmt.Errorf("error setting uplink model order options: %s", err.Error())
 	}
 
 	return nil

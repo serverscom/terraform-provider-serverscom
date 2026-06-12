@@ -69,7 +69,7 @@ func dataSourceServerscomOperatingSystemOrderOptionsRead(d *schema.ResourceData,
 
 	operatingSystems, err := collection.Collect(ctx)
 	if err != nil {
-		return fmt.Errorf("Error retrieving operating system order options: %s", err.Error())
+		return fmt.Errorf("error retrieving operating system order options: %s", err.Error())
 	}
 
 	osList := make([]map[string]any, 0, len(operatingSystems))
@@ -86,7 +86,7 @@ func dataSourceServerscomOperatingSystemOrderOptionsRead(d *schema.ResourceData,
 
 	d.SetId(fmt.Sprintf("operating_systems-%d-%d", locationID, serverModelID))
 	if err := d.Set("operating_systems", osList); err != nil {
-		return fmt.Errorf("Error setting operating system order options: %s", err.Error())
+		return fmt.Errorf("error setting operating system order options: %s", err.Error())
 	}
 
 	return nil

@@ -122,7 +122,7 @@ func resourceServerscomSBMRead(d *schema.ResourceData, meta any) error {
 			d.SetId("")
 			return nil
 		default:
-			return fmt.Errorf("Error retrieving SBM server: %s", err)
+			return fmt.Errorf("error retrieving SBM server: %s", err)
 		}
 	}
 
@@ -183,14 +183,14 @@ func resourceServerscomSBMDelete(d *schema.ResourceData, meta any) error {
 			d.SetId("")
 			return nil
 		default:
-			return fmt.Errorf("Error retrieving SBM server: %s", err.Error())
+			return fmt.Errorf("error retrieving SBM server: %s", err.Error())
 		}
 	}
 
 	if sbm.Status == "pending" || sbm.Status == "init" {
 		_, err = waitForSBMAttribute(ctx, d, "active", []string{"init", "pending"}, "status", meta, schema.TimeoutDelete)
 		if err != nil {
-			return fmt.Errorf("Error waiting for SBM server (%s) to become ready: %s", d.Id(), err)
+			return fmt.Errorf("error waiting for SBM server (%s) to become ready: %s", d.Id(), err)
 		}
 	}
 
@@ -282,20 +282,20 @@ func resourceServerscomSBMCreate(d *schema.ResourceData, meta any) error {
 	}
 
 	if result.Servers.Count() == 0 {
-		return fmt.Errorf("Invalid SBM servers count returned by api")
+		return fmt.Errorf("invalid SBM servers count returned by api")
 	}
 
 	// find corresponding server by title matching hostname
 	id := result.Servers.GetIdByHostname(hostname)
 	if id == "" {
-		return fmt.Errorf("Can't find the server with title '%s' in api response", hostname)
+		return fmt.Errorf("can't find the server with title '%s' in api response", hostname)
 	}
 
 	d.SetId(id)
 
 	_, err = waitForSBMAttribute(ctx, d, "active", []string{"init", "pending"}, "status", meta, schema.TimeoutCreate)
 	if err != nil {
-		return fmt.Errorf("Error waiting for SBM server (%s) to become ready: %s", d.Id(), err)
+		return fmt.Errorf("error waiting for SBM server (%s) to become ready: %s", d.Id(), err)
 	}
 
 	return nil
@@ -328,9 +328,9 @@ func newSBMStateRefreshFunc(d *schema.ResourceData, attribute string, meta any) 
 
 		// See if we can access our attribute
 		if attr, ok := d.GetOk(attribute); ok {
-			switch attr.(type) {
+			switch attr := attr.(type) {
 			case bool:
-				return d, strconv.FormatBool(attr.(bool)), nil
+				return d, strconv.FormatBool(attr), nil
 			default:
 				return d, attr.(string), nil
 			}
@@ -354,7 +354,7 @@ func getSBMOperatingSystem(locationID int64, sbmFlavorModelID int64, name string
 		}
 	}
 
-	return nil, fmt.Errorf("Can't find operating system by: %s", name)
+	return nil, fmt.Errorf("can't find operating system by: %s", name)
 }
 
 func getSBMFlavor(regionID int64, name string) (*scgo.SBMFlavor, error) {
@@ -369,7 +369,7 @@ func getSBMFlavor(regionID int64, name string) (*scgo.SBMFlavor, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("Can't find SBM flavor by: %s", name)
+	return nil, fmt.Errorf("can't find SBM flavor by: %s", name)
 }
 
 // SBMServerCreateInput implements ServerCreateInput interface

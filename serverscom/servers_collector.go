@@ -167,7 +167,7 @@ func CreateServersBatch(ctx context.Context, client *scgo.Client, requests []*Re
 		result.Servers = servers
 		result.Error = err
 	default:
-		result.Error = fmt.Errorf("Unknown resource type: %T\n", v)
+		result.Error = fmt.Errorf("unknown resource type: %T", v)
 	}
 
 	for _, req := range requests {
@@ -199,6 +199,6 @@ func getHostHostname(hostInput any) (string, error) {
 	case scgo.SBMServerHostInput:
 		return v.Hostname, nil
 	default:
-		return "", fmt.Errorf("Unknown host input type: %T\n", v)
+		return "", fmt.Errorf("unknown host input type: %T", v)
 	}
 }

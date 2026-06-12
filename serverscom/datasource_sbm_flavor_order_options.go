@@ -133,7 +133,7 @@ func dataSourceServerscomSbmFlavorOrderOptionsRead(d *schema.ResourceData, meta 
 
 	options, err := collection.Collect(ctx)
 	if err != nil {
-		return fmt.Errorf("Error retrieving SBM flavor order options: %s", err.Error())
+		return fmt.Errorf("error retrieving SBM flavor order options: %s", err.Error())
 	}
 
 	optionList := make([]map[string]any, 0, len(options))
@@ -159,7 +159,7 @@ func dataSourceServerscomSbmFlavorOrderOptionsRead(d *schema.ResourceData, meta 
 	d.SetId(id)
 
 	if err := d.Set("sbm_flavors", optionList); err != nil {
-		return fmt.Errorf("Error setting SBM flavor order options: %s", err.Error())
+		return fmt.Errorf("error setting SBM flavor order options: %s", err.Error())
 	}
 
 	return nil

@@ -62,7 +62,7 @@ func dataSourceServerscomL2SegmentRead(d *schema.ResourceData, meta any) error {
 
 	L2Segment, err := client.L2Segments.Get(ctx, L2SegmentID)
 	if err != nil {
-		return fmt.Errorf("Error retrieving L2 segment: %s", err.Error())
+		return fmt.Errorf("error retrieving L2 segment: %s", err.Error())
 	}
 
 	d.SetId(L2Segment.ID)

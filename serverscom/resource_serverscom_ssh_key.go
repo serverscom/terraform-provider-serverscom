@@ -113,7 +113,7 @@ func resourceServerscomSSHKeyDelete(d *schema.ResourceData, meta any) error {
 			d.SetId("")
 			return nil
 		default:
-			return fmt.Errorf("Error retrieving ssh key: %s", err.Error())
+			return fmt.Errorf("error retrieving ssh key: %s", err.Error())
 		}
 	}
 

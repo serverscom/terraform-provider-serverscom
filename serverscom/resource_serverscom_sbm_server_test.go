@@ -23,20 +23,20 @@ func testSweepSBMServers(region string) error {
 	log.Printf("[DEBUG] Sweeping SBM servers")
 	client, err := createClient()
 	if err != nil {
-		return fmt.Errorf("Error getting client for sweeping SBM servers: %s", err)
+		return fmt.Errorf("error getting client for sweeping SBM servers: %s", err)
 	}
 
 	ctx := context.TODO()
 
 	servers, err := client.Hosts.Collection().Collect(ctx)
 	if err != nil {
-		return fmt.Errorf("Error getting list of SBM servers: %s", err)
+		return fmt.Errorf("error getting list of SBM servers: %s", err)
 	}
 
 	for _, server := range servers {
 		_, err := client.Hosts.ReleaseSBMServer(ctx, server.ID)
 		if err != nil {
-			return fmt.Errorf("Can't release SBM server (%s): %s", server.ID, err)
+			return fmt.Errorf("can't release SBM server (%s): %s", server.ID, err)
 		}
 	}
 
@@ -81,11 +81,11 @@ func testAccServerscomCheckSBMServerExists(n string, sbmServer *scgo.SBMServer) 
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
-			return fmt.Errorf("Not found: %s", n)
+			return fmt.Errorf("not found: %s", n)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("No SBM server ID is set")
+			return fmt.Errorf("no SBM server ID is set")
 		}
 
 		client := testAccProvider.Meta().(*scgo.Client)
@@ -114,7 +114,7 @@ func testAccServerscomCheckSBMServerDestroy(s *terraform.State) error {
 			case *scgo.NotFoundError:
 				return nil
 			default:
-				return fmt.Errorf("Error retrieving SBM server: %s", err)
+				return fmt.Errorf("error retrieving SBM server: %s", err)
 			}
 		}
 

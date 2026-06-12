@@ -59,13 +59,13 @@ func resourceServerscomSubnetworkRead(d *schema.ResourceData, meta any) error {
 			d.SetId("")
 			return nil
 		default:
-			return fmt.Errorf("Error retrieving subnetwork: %s", err)
+			return fmt.Errorf("error retrieving subnetwork: %s", err)
 		}
 	}
 
 	_, ipv4Net, err := net.ParseCIDR(subnetwork.CIDR)
 	if err != nil {
-		return fmt.Errorf("Invalid cidr value: %s", err.Error())
+		return fmt.Errorf("invalid cidr value: %s", err.Error())
 	}
 
 	mask, _ := ipv4Net.Mask.Size()
@@ -115,7 +115,7 @@ func resourceServerscomSubnetworkDelete(d *schema.ResourceData, meta any) error 
 			d.SetId("")
 			return nil
 		default:
-			return fmt.Errorf("Error retrieving subnetwork: %s", err.Error())
+			return fmt.Errorf("error retrieving subnetwork: %s", err.Error())
 		}
 	}
 

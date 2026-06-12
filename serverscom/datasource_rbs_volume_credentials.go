@@ -29,7 +29,7 @@ func dataSourceServerscomRBSVolumeCredentialsRead(ctx context.Context, d *schema
 
 	creds, err := client.RemoteBlockStorageVolumes.GetCredentials(ctx, volumeID)
 	if err != nil {
-		return diag.FromErr(fmt.Errorf("Error retrieving RBS volume credentials: %s", err.Error()))
+		return diag.FromErr(fmt.Errorf("error retrieving RBS volume credentials: %s", err.Error()))
 	}
 
 	d.SetId(creds.VolumeID)

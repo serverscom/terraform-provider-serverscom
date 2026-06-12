@@ -48,9 +48,7 @@ func flattenServerscomNetworkPool(rawNetworkPool, meta any, extra map[string]any
 	}
 
 	locationIds := make([]int, len(networkPool.LocationIDs))
-	for i, locationId := range networkPool.LocationIDs {
-		locationIds[i] = locationId
-	}
+	copy(locationIds, networkPool.LocationIDs)
 
 	flattenNetworkPool["location_ids"] = locationIds
 

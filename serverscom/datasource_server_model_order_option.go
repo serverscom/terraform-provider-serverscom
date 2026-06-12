@@ -107,7 +107,7 @@ func dataSourceServerscomServerModelOrderOptionRead(d *schema.ResourceData, meta
 
 	option, err := client.Locations.GetServerModelOption(ctx, int64(locationID), int64(serverModelID))
 	if err != nil {
-		return fmt.Errorf("Error retrieving server model order option: %s", err.Error())
+		return fmt.Errorf("error retrieving server model order option: %s", err.Error())
 	}
 
 	d.SetId(strconv.Itoa(int(option.ID)))
@@ -135,7 +135,7 @@ func dataSourceServerscomServerModelOrderOptionRead(d *schema.ResourceData, meta
 		driveSlots = append(driveSlots, driveSlot)
 	}
 	if err := d.Set("drive_slots", driveSlots); err != nil {
-		return fmt.Errorf("Error setting drive_slots: %s", err.Error())
+		return fmt.Errorf("error setting drive_slots: %s", err.Error())
 	}
 
 	return nil

@@ -213,7 +213,7 @@ func resourceServerscomDedicatedServerRead(d *schema.ResourceData, meta any) err
 			d.SetId("")
 			return nil
 		default:
-			return fmt.Errorf("Error retrieving dedicated server: %s", err)
+			return fmt.Errorf("error retrieving dedicated server: %s", err)
 		}
 	}
 
@@ -316,7 +316,7 @@ func resourceServerscomDedicatedServerDelete(d *schema.ResourceData, meta any) e
 			d.SetId("")
 			return nil
 		default:
-			return fmt.Errorf("Error retrieving dedicated server: %s", err.Error())
+			return fmt.Errorf("error retrieving dedicated server: %s", err.Error())
 		}
 	}
 
@@ -329,7 +329,7 @@ func resourceServerscomDedicatedServerDelete(d *schema.ResourceData, meta any) e
 	if dedicatedServer.Status == "pending" || dedicatedServer.Status == "init" {
 		_, err = waitForDedicatedServerAttribute(ctx, d, "active", []string{"init", "pending"}, "status", meta, schema.TimeoutDelete)
 		if err != nil {
-			return fmt.Errorf("Error waiting for dedicated server (%s) to become ready: %s", d.Id(), err)
+			return fmt.Errorf("error waiting for dedicated server (%s) to become ready: %s", d.Id(), err)
 		}
 	}
 
@@ -489,20 +489,20 @@ func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta any) e
 	}
 
 	if result.Servers.Count() == 0 {
-		return fmt.Errorf("Invalid dedicated servers count returned by api")
+		return fmt.Errorf("invalid dedicated servers count returned by api")
 	}
 
 	// find corresponding server by title matching hostname
 	id := result.Servers.GetIdByHostname(hostname)
 	if id == "" {
-		return fmt.Errorf("Can't find the server with title '%s' in api response", hostname)
+		return fmt.Errorf("can't find the server with title '%s' in api response", hostname)
 	}
 
 	d.SetId(id)
 
 	_, err = waitForDedicatedServerAttribute(ctx, d, "active", []string{"init", "pending"}, "status", meta, schema.TimeoutCreate)
 	if err != nil {
-		return fmt.Errorf("Error waiting for dedicated server (%s) to become ready: %s", d.Id(), err)
+		return fmt.Errorf("error waiting for dedicated server (%s) to become ready: %s", d.Id(), err)
 	}
 
 	return nil
@@ -540,7 +540,7 @@ func getLocation(code string) (*scgo.Location, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("Can't find location by: %s", code)
+	return nil, fmt.Errorf("can't find location by: %s", code)
 }
 
 func getServerModel(locationID int64, name string) (*scgo.ServerModelOption, error) {
@@ -555,7 +555,7 @@ func getServerModel(locationID int64, name string) (*scgo.ServerModelOption, err
 		}
 	}
 
-	return nil, fmt.Errorf("Can't find server model by: %s", name)
+	return nil, fmt.Errorf("can't find server model by: %s", name)
 }
 
 func getDriveModel(locationID int64, serverModelID int64, name string) (*scgo.DriveModel, error) {
@@ -570,7 +570,7 @@ func getDriveModel(locationID int64, serverModelID int64, name string) (*scgo.Dr
 		}
 	}
 
-	return nil, fmt.Errorf("Can't find drive model by: %s", name)
+	return nil, fmt.Errorf("can't find drive model by: %s", name)
 }
 
 func getOperatingSystem(locationID int64, serverModelID int64, name string) (*scgo.OperatingSystemOption, error) {
@@ -587,7 +587,7 @@ func getOperatingSystem(locationID int64, serverModelID int64, name string) (*sc
 		}
 	}
 
-	return nil, fmt.Errorf("Can't find operating system by: %s", name)
+	return nil, fmt.Errorf("can't find operating system by: %s", name)
 }
 
 func getUplink(locationID int64, serverModelID int64, name string) (*scgo.UplinkOption, error) {
@@ -602,7 +602,7 @@ func getUplink(locationID int64, serverModelID int64, name string) (*scgo.Uplink
 		}
 	}
 
-	return nil, fmt.Errorf("Can't find uplink by: %s", name)
+	return nil, fmt.Errorf("can't find uplink by: %s", name)
 }
 
 func getBandwidth(locationID int64, serverModelID int64, uplinkModelID int64, name string) (*scgo.BandwidthOption, error) {
@@ -617,7 +617,7 @@ func getBandwidth(locationID int64, serverModelID int64, uplinkModelID int64, na
 		}
 	}
 
-	return nil, fmt.Errorf("Can't find bandwidth by: %s", name)
+	return nil, fmt.Errorf("can't find bandwidth by: %s", name)
 }
 
 func getSlots(d *schema.ResourceData, locationID int64, serverModelID int64) ([]scgo.DedicatedServerSlotInput, error) {
@@ -754,9 +754,9 @@ func newDedicatedServerStateRefreshFunc(d *schema.ResourceData, attribute string
 
 		// See if we can access our attribute
 		if attr, ok := d.GetOk(attribute); ok {
-			switch attr.(type) {
+			switch attr := attr.(type) {
 			case bool:
-				return d, strconv.FormatBool(attr.(bool)), nil
+				return d, strconv.FormatBool(attr), nil
 			default:
 				return d, attr.(string), nil
 			}

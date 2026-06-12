@@ -23,20 +23,20 @@ func testSweepDededicatedServers(region string) error {
 	log.Printf("[DEBUG] Sweeping dedicated servers")
 	client, err := createClient()
 	if err != nil {
-		return fmt.Errorf("Error getting client for sweeping dedicated servers: %s", err)
+		return fmt.Errorf("error getting client for sweeping dedicated servers: %s", err)
 	}
 
 	ctx := context.TODO()
 
 	hosts, err := client.Hosts.Collection().Collect(ctx)
 	if err != nil {
-		return fmt.Errorf("Error getting list of hosts for sweeping dedicated servers: %s", err)
+		return fmt.Errorf("error getting list of hosts for sweeping dedicated servers: %s", err)
 	}
 
 	for _, host := range hosts {
 		_, err := client.Hosts.ScheduleReleaseForDedicatedServer(ctx, host.ID, scgo.ScheduleReleaseInput{})
 		if err != nil {
-			return fmt.Errorf("Can't schedule release for dedicated server (%s): %s", host.ID, err)
+			return fmt.Errorf("can't schedule release for dedicated server (%s): %s", host.ID, err)
 		}
 	}
 
@@ -113,11 +113,11 @@ func testAccServerscomCheckDedicatedServerExists(n string, dedicatedServer *scgo
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
-			return fmt.Errorf("Not found: %s", n)
+			return fmt.Errorf("not found: %s", n)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("No dedicated server ID is set")
+			return fmt.Errorf("no dedicated server ID is set")
 		}
 
 		client := testAccProvider.Meta().(*scgo.Client)
@@ -146,7 +146,7 @@ func testAccServerscomCheckDedicatedServerDestroy(s *terraform.State) error {
 			case *scgo.NotFoundError:
 				return nil
 			default:
-				return fmt.Errorf("Error retrieving dedicated server: %s", err)
+				return fmt.Errorf("error retrieving dedicated server: %s", err)
 			}
 		}
 

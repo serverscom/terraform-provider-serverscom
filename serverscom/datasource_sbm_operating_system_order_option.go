@@ -61,7 +61,7 @@ func dataSourceServerscomSbmOperatingSystemOrderOptionRead(d *schema.ResourceDat
 
 	os, err := client.Locations.GetSBMOperatingSystemOption(ctx, int64(locationID), int64(sbmFlavorModelID), int64(osID))
 	if err != nil {
-		return fmt.Errorf("Error retrieving SBM operating system order option: %s", err.Error())
+		return fmt.Errorf("error retrieving SBM operating system order option: %s", err.Error())
 	}
 
 	d.SetId(strconv.Itoa(int(os.ID)))

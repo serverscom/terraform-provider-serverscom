@@ -56,7 +56,7 @@ func dataSourceServerscomUplinkModelOrderOptionRead(d *schema.ResourceData, meta
 
 	uplink, err := client.Locations.GetUplinkOption(ctx, int64(locationID), int64(serverModelID), int64(uplinkModelID))
 	if err != nil {
-		return fmt.Errorf("Error retrieving uplink model order option: %s", err.Error())
+		return fmt.Errorf("error retrieving uplink model order option: %s", err.Error())
 	}
 
 	d.SetId(strconv.Itoa(int(uplink.ID)))

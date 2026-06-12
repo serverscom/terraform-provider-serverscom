@@ -110,7 +110,7 @@ func dataSourceServerscomCloudInstanceRead(d *schema.ResourceData, meta any) err
 
 	instance, err := client.CloudComputingInstances.Get(ctx, instanceID)
 	if err != nil {
-		return fmt.Errorf("Error retrieving cloud instance: %s", err.Error())
+		return fmt.Errorf("error retrieving cloud instance: %s", err.Error())
 	}
 
 	d.SetId(instance.ID)

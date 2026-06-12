@@ -200,7 +200,7 @@ func resourceServerscomRBSVolumeDelete(ctx context.Context, d *schema.ResourceDa
 	target := []string{"removing", "removed"} // removed - state when read returns 404
 	_, err = waitForRBSVolumeAttribute(ctx, d, target, pending, "status", meta, "delete")
 	if err != nil {
-		return diag.FromErr(fmt.Errorf("Error waiting for rbs volume (%s) to become deleted: %s", d.Id(), err))
+		return diag.FromErr(fmt.Errorf("error waiting for rbs volume (%s) to become deleted: %s", d.Id(), err))
 	}
 	d.SetId("")
 	return nil

@@ -18,9 +18,9 @@ func HashString(s string) string {
 
 func HashStringStateFunc() schema.SchemaStateFunc {
 	return func(v any) string {
-		switch v.(type) {
+		switch v := v.(type) {
 		case string:
-			return HashString(v.(string))
+			return HashString(v)
 		default:
 			return ""
 		}

@@ -93,7 +93,7 @@ func dataSourceServerscomBandwidthOrderOptionsRead(d *schema.ResourceData, meta 
 
 	bandwidthOptions, err := collection.Collect(ctx)
 	if err != nil {
-		return fmt.Errorf("Error retrieving bandwidth order options: %s", err.Error())
+		return fmt.Errorf("error retrieving bandwidth order options: %s", err.Error())
 	}
 
 	optionList := make([]map[string]any, 0, len(bandwidthOptions))
@@ -112,7 +112,7 @@ func dataSourceServerscomBandwidthOrderOptionsRead(d *schema.ResourceData, meta 
 
 	d.SetId(id)
 	if err := d.Set("bandwidth_options", optionList); err != nil {
-		return fmt.Errorf("Error setting bandwidth order options: %s", err.Error())
+		return fmt.Errorf("error setting bandwidth order options: %s", err.Error())
 	}
 
 	return nil

@@ -72,7 +72,7 @@ func dataSourceServerscomL2SegmentMembersRead(d *schema.ResourceData, meta any) 
 
 	members, err := client.L2Segments.Members(L2SegmentID).Collect(ctx)
 	if err != nil {
-		return fmt.Errorf("Error retrieving L2 members: %s", err.Error())
+		return fmt.Errorf("error retrieving L2 members: %s", err.Error())
 	}
 
 	d.SetId(L2SegmentID)
@@ -93,7 +93,7 @@ func dataSourceServerscomL2SegmentMembersRead(d *schema.ResourceData, meta any) 
 	}
 
 	if err := d.Set("members", membersList); err != nil {
-		return fmt.Errorf("Error setting members: %s", err.Error())
+		return fmt.Errorf("error setting members: %s", err.Error())
 	}
 
 	return nil

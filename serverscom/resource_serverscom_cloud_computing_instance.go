@@ -250,7 +250,7 @@ func resourceServerscomCloudComputingInstanceDelete(d *schema.ResourceData, meta
 			d.SetId("")
 			return nil
 		default:
-			return fmt.Errorf("Error retrieving cloud computing instance: %s", err.Error())
+			return fmt.Errorf("error retrieving cloud computing instance: %s", err.Error())
 		}
 	}
 
@@ -337,7 +337,7 @@ func resourceServerscomCloudComputingInstanceCreate(d *schema.ResourceData, meta
 	pending := []string{"CREATING", "PENDING", "PROVISIONING", "BUILDING", "REBOOTING"}
 	_, err = waitForCloudComputingInstanceAttribute(ctx, d, "ACTIVE", pending, "status", meta, schema.TimeoutCreate)
 	if err != nil {
-		return fmt.Errorf("Error waiting for cloud computing instance (%s) to become active: %s", d.Id(), err)
+		return fmt.Errorf("error waiting for cloud computing instance (%s) to become active: %s", d.Id(), err)
 	}
 
 	return nil
@@ -370,9 +370,9 @@ func newCloudComputingInstanceStateRefreshFunc(d *schema.ResourceData, attribute
 
 		// See if we can access our attribute
 		if attr, ok := d.GetOk(attribute); ok {
-			switch attr.(type) {
+			switch attr := attr.(type) {
 			case bool:
-				return d, strconv.FormatBool(attr.(bool)), nil
+				return d, strconv.FormatBool(attr), nil
 			default:
 				return d, attr.(string), nil
 			}
@@ -394,7 +394,7 @@ func getRegion(code string) (*scgo.CloudComputingRegion, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("Can't find cloud computing region by: %s", code)
+	return nil, fmt.Errorf("can't find cloud computing region by: %s", code)
 }
 
 func getFlavor(regionID int64, name string) (*scgo.CloudComputingFlavor, error) {
@@ -409,7 +409,7 @@ func getFlavor(regionID int64, name string) (*scgo.CloudComputingFlavor, error) 
 		}
 	}
 
-	return nil, fmt.Errorf("Can't find cloud computing flavor by: %s", name)
+	return nil, fmt.Errorf("can't find cloud computing flavor by: %s", name)
 }
 
 func getImage(regionID int64, name string) (*scgo.CloudComputingImage, error) {
@@ -424,5 +424,5 @@ func getImage(regionID int64, name string) (*scgo.CloudComputingImage, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("Can't find cloud computing image by: %s", name)
+	return nil, fmt.Errorf("can't find cloud computing image by: %s", name)
 }

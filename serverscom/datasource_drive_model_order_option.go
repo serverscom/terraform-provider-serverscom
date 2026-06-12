@@ -60,7 +60,7 @@ func dataSourceServerscomDriveModelOrderOptionRead(d *schema.ResourceData, meta 
 
 	model, err := client.Locations.GetDriveModelOption(ctx, int64(locationID), int64(serverModelID), int64(driveModelID))
 	if err != nil {
-		return fmt.Errorf("Error retrieving drive model order option: %s", err.Error())
+		return fmt.Errorf("error retrieving drive model order option: %s", err.Error())
 	}
 
 	d.SetId(strconv.Itoa(int(model.ID)))

@@ -124,7 +124,7 @@ func resourceServerscomL2SegmentRead(d *schema.ResourceData, meta any) error {
 			d.SetId("")
 			return nil
 		default:
-			return fmt.Errorf("Error retrieving l2 segment: %s", err)
+			return fmt.Errorf("error retrieving l2 segment: %s", err)
 		}
 	}
 
@@ -217,7 +217,7 @@ func resourceServerscomL2SegmentDelete(d *schema.ResourceData, meta any) error {
 			d.SetId("")
 			return nil
 		default:
-			return fmt.Errorf("Error retrieving l2 segment: %s", err)
+			return fmt.Errorf("error retrieving l2 segment: %s", err)
 		}
 	}
 
@@ -324,9 +324,9 @@ func newL2SegmentStateRefreshFunc(d *schema.ResourceData, attribute string, meta
 
 		// See if we can access our attribute
 		if attr, ok := d.GetOk(attribute); ok {
-			switch attr.(type) {
+			switch attr := attr.(type) {
 			case bool:
-				return d, strconv.FormatBool(attr.(bool)), nil
+				return d, strconv.FormatBool(attr), nil
 			default:
 				return d, attr.(string), nil
 			}
@@ -348,7 +348,7 @@ func getLocationGroup(groupType string, groupCode string) (*scgo.L2LocationGroup
 		}
 	}
 
-	return nil, fmt.Errorf("Can't find location group by: %s (%s)", groupCode, groupType)
+	return nil, fmt.Errorf("can't find location group by: %s (%s)", groupCode, groupType)
 }
 
 func getSchemaMembers(d *schema.ResourceData) []scgo.L2SegmentMemberInput {

@@ -113,7 +113,7 @@ func dataSourceServerscomDriveModelOrderOptionsRead(d *schema.ResourceData, meta
 
 	driveModels, err := collection.Collect(ctx)
 	if err != nil {
-		return fmt.Errorf("Error retrieving drive model order options: %s", err.Error())
+		return fmt.Errorf("error retrieving drive model order options: %s", err.Error())
 	}
 
 	driveModelList := make([]map[string]any, 0, len(driveModels))
@@ -130,7 +130,7 @@ func dataSourceServerscomDriveModelOrderOptionsRead(d *schema.ResourceData, meta
 
 	d.SetId(id)
 	if err := d.Set("drive_models", driveModelList); err != nil {
-		return fmt.Errorf("Error setting drive model order options: %s", err.Error())
+		return fmt.Errorf("error setting drive model order options: %s", err.Error())
 	}
 
 	return nil

@@ -143,7 +143,7 @@ func dataSourceServerscomDedicatedServerRead(d *schema.ResourceData, meta any) e
 
 	server, err := client.Hosts.GetDedicatedServer(ctx, serverID)
 	if err != nil {
-		return fmt.Errorf("Error retrieving dedicated server: %s", err.Error())
+		return fmt.Errorf("error retrieving dedicated server: %s", err.Error())
 	}
 
 	d.SetId(server.ID)
