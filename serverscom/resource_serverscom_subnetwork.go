@@ -2,20 +2,20 @@ package serverscom
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	scgo "github.com/serverscom/serverscom-go-client/pkg"
 )
 
 func resourceServerscomSubnetwork() *schema.Resource {
 	return &schema.Resource{
-		Read:   resourceServerscomSubnetworkRead,
-		Update: resourceServerscomSubnetworkUpdate,
-		Delete: resourceServerscomSubnetworkDelete,
-		Create: resourceServerscomSubnetworkCreate,
+		ReadContext:   resourceServerscomSubnetworkRead,
+		UpdateContext: resourceServerscomSubnetworkUpdate,
+		DeleteContext: resourceServerscomSubnetworkDelete,
+		CreateContext: resourceServerscomSubnetworkCreate,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -45,9 +45,8 @@ func resourceServerscomSubnetwork() *schema.Resource {
 	}
 }
 
-func resourceServerscomSubnetworkRead(d *schema.ResourceData, meta any) error {
+func resourceServerscomSubnetworkRead(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*scgo.Client)
-	ctx := context.TODO()
 
 	networkPoolID := d.Get("network_pool_id").(string)
 
@@ -59,13 +58,13 @@ func resourceServerscomSubnetworkRead(d *schema.ResourceData, meta any) error {
 			d.SetId("")
 			return nil
 		default:
-			return fmt.Errorf("error retrieving subnetwork: %s", err)
+			return diag.Errorf("error retrieving subnetwork: %s", err)
 		}
 	}
 
 	_, ipv4Net, err := net.ParseCIDR(subnetwork.CIDR)
 	if err != nil {
-		return fmt.Errorf("invalid cidr value: %s", err.Error())
+		return diag.Errorf("invalid cidr value: %s", err.Error())
 	}
 
 	mask, _ := ipv4Net.Mask.Size()
@@ -78,9 +77,8 @@ func resourceServerscomSubnetworkRead(d *schema.ResourceData, meta any) error {
 	return nil
 }
 
-func resourceServerscomSubnetworkUpdate(d *schema.ResourceData, meta any) error {
+func resourceServerscomSubnetworkUpdate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*scgo.Client)
-	ctx := context.TODO()
 
 	networkPoolID := d.Get("network_pool_id").(string)
 
@@ -96,15 +94,14 @@ func resourceServerscomSubnetworkUpdate(d *schema.ResourceData, meta any) error 
 	input.Title = newTitle
 
 	if _, err := client.NetworkPools.UpdateSubnetwork(ctx, networkPoolID, d.Id(), input); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	return resourceServerscomSubnetworkRead(d, meta)
+	return resourceServerscomSubnetworkRead(ctx, d, meta)
 }
 
-func resourceServerscomSubnetworkDelete(d *schema.ResourceData, meta any) error {
+func resourceServerscomSubnetworkDelete(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*scgo.Client)
-	ctx := context.TODO()
 
 	networkPoolID := d.Get("network_pool_id").(string)
 
@@ -115,16 +112,19 @@ func resourceServerscomSubnetworkDelete(d *schema.ResourceData, meta any) error 
 			d.SetId("")
 			return nil
 		default:
-			return fmt.Errorf("error retrieving subnetwork: %s", err.Error())
+			return diag.Errorf("error retrieving subnetwork: %s", err.Error())
 		}
 	}
 
-	return client.NetworkPools.DeleteSubnetwork(ctx, networkPoolID, d.Id())
+	if err := client.NetworkPools.DeleteSubnetwork(ctx, networkPoolID, d.Id()); err != nil {
+		return diag.FromErr(err)
+	}
+
+	return nil
 }
 
-func resourceServerscomSubnetworkCreate(d *schema.ResourceData, meta any) error {
+func resourceServerscomSubnetworkCreate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*scgo.Client)
-	ctx := context.TODO()
 
 	networkPoolID := d.Get("network_pool_id").(string)
 
@@ -146,17 +146,17 @@ func resourceServerscomSubnetworkCreate(d *schema.ResourceData, meta any) error 
 		maskValue := mask.(int)
 		input.Mask = &maskValue
 	} else {
-		return fmt.Errorf("mask or cidr must be set")
+		return diag.Errorf("mask or cidr must be set")
 	}
 
 	subnetwork, err := client.NetworkPools.CreateSubnetwork(ctx, networkPoolID, input)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.SetId(subnetwork.ID)
 
-	return resourceServerscomSubnetworkRead(d, meta)
+	return resourceServerscomSubnetworkRead(ctx, d, meta)
 }
 
 func resourceServerscomSubnetworkCIDRDiffSupress(k, old, new string, d *schema.ResourceData) bool {

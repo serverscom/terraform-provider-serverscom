@@ -2,11 +2,13 @@ package serverscom
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -20,10 +22,10 @@ var (
 
 func resourceServerscomSBM() *schema.Resource {
 	return &schema.Resource{
-		Read:   resourceServerscomSBMRead,
-		Update: resourceServerscomSBMUpdate,
-		Delete: resourceServerscomSBMDelete,
-		Create: resourceServerscomSBMCreate,
+		ReadContext:   resourceServerscomSBMRead,
+		UpdateContext: resourceServerscomSBMUpdate,
+		DeleteContext: resourceServerscomSBMDelete,
+		CreateContext: resourceServerscomSBMCreate,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -109,10 +111,8 @@ func resourceServerscomSBM() *schema.Resource {
 	}
 }
 
-func resourceServerscomSBMRead(d *schema.ResourceData, meta any) error {
+func resourceServerscomSBMRead(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*scgo.Client)
-
-	ctx := context.TODO()
 
 	sbm, err := client.Hosts.GetSBMServer(ctx, d.Id())
 	if err != nil {
@@ -122,7 +122,7 @@ func resourceServerscomSBMRead(d *schema.ResourceData, meta any) error {
 			d.SetId("")
 			return nil
 		default:
-			return fmt.Errorf("error retrieving SBM server: %s", err)
+			return diag.Errorf("error retrieving SBM server: %s", err)
 		}
 	}
 
@@ -141,7 +141,7 @@ func resourceServerscomSBMRead(d *schema.ResourceData, meta any) error {
 	return nil
 }
 
-func resourceServerscomSBMUpdate(d *schema.ResourceData, meta any) error {
+func resourceServerscomSBMUpdate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	input := scgo.SBMServerUpdateInput{}
 
 	hasChanges := false
@@ -159,21 +159,19 @@ func resourceServerscomSBMUpdate(d *schema.ResourceData, meta any) error {
 
 	if hasChanges {
 		client := meta.(*scgo.Client)
-		ctx := context.TODO()
 
 		if _, err := client.Hosts.UpdateSBMServer(ctx, d.Id(), input); err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 
-		return resourceServerscomSBMRead(d, meta)
+		return resourceServerscomSBMRead(ctx, d, meta)
 	}
 
 	return nil
 }
 
-func resourceServerscomSBMDelete(d *schema.ResourceData, meta any) error {
+func resourceServerscomSBMDelete(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*scgo.Client)
-	ctx := context.TODO()
 
 	sbm, err := client.Hosts.GetSBMServer(ctx, d.Id())
 	if err != nil {
@@ -183,25 +181,25 @@ func resourceServerscomSBMDelete(d *schema.ResourceData, meta any) error {
 			d.SetId("")
 			return nil
 		default:
-			return fmt.Errorf("error retrieving SBM server: %s", err.Error())
+			return diag.Errorf("error retrieving SBM server: %s", err.Error())
 		}
 	}
 
 	if sbm.Status == "pending" || sbm.Status == "init" {
 		_, err = waitForSBMAttribute(ctx, d, "active", []string{"init", "pending"}, "status", meta, schema.TimeoutDelete)
 		if err != nil {
-			return fmt.Errorf("error waiting for SBM server (%s) to become ready: %s", d.Id(), err)
+			return diag.Errorf("error waiting for SBM server (%s) to become ready: %s", d.Id(), err)
 		}
 	}
 
 	if _, err := client.Hosts.ReleaseSBMServer(ctx, d.Id()); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
 }
 
-func resourceServerscomSBMCreate(d *schema.ResourceData, meta any) error {
+func resourceServerscomSBMCreate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	var (
 		publicIpv4NetworkId  *string
 		privateIpv4NetworkId *string
@@ -236,24 +234,24 @@ func resourceServerscomSBMCreate(d *schema.ResourceData, meta any) error {
 		input.Hosts[0].Labels = stringLabels
 	}
 
-	location, err := getLocation(d.Get("location").(string))
+	location, err := getLocation(ctx, d.Get("location").(string))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	input.LocationID = location.ID
 
-	flavor, err := getSBMFlavor(location.ID, d.Get("flavor").(string))
+	flavor, err := getSBMFlavor(ctx, location.ID, d.Get("flavor").(string))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	input.FlavorModelID = flavor.ID
 
 	if operatingSystemName, ok := d.GetOk("operating_system"); ok {
-		operatingSystem, err := getSBMOperatingSystem(location.ID, flavor.ID, operatingSystemName.(string))
+		operatingSystem, err := getSBMOperatingSystem(ctx, location.ID, flavor.ID, operatingSystemName.(string))
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 
 		input.OperatingSystemID = &operatingSystem.ID
@@ -268,34 +266,32 @@ func resourceServerscomSBMCreate(d *schema.ResourceData, meta any) error {
 		input.UserData = &userDataValue
 	}
 
-	ctx := context.TODO()
-
 	resultChan, err := serverCollector.AddRequest(ctx, "sbm", input)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	// waiting for result from collector
 	result := <-resultChan
 	if result.Error != nil {
-		return result.Error
+		return diag.FromErr(result.Error)
 	}
 
 	if result.Servers.Count() == 0 {
-		return fmt.Errorf("invalid SBM servers count returned by api")
+		return diag.Errorf("invalid SBM servers count returned by api")
 	}
 
 	// find corresponding server by title matching hostname
 	id := result.Servers.GetIdByHostname(hostname)
 	if id == "" {
-		return fmt.Errorf("can't find the server with title '%s' in api response", hostname)
+		return diag.Errorf("can't find the server with title '%s' in api response", hostname)
 	}
 
 	d.SetId(id)
 
 	_, err = waitForSBMAttribute(ctx, d, "active", []string{"init", "pending"}, "status", meta, schema.TimeoutCreate)
 	if err != nil {
-		return fmt.Errorf("error waiting for SBM server (%s) to become ready: %s", d.Id(), err)
+		return diag.Errorf("error waiting for SBM server (%s) to become ready: %s", d.Id(), err)
 	}
 
 	return nil
@@ -310,7 +306,7 @@ func waitForSBMAttribute(ctx context.Context, d *schema.ResourceData, target str
 	stateConf := &retry.StateChangeConf{
 		Pending:    pending,
 		Target:     []string{target},
-		Refresh:    newSBMStateRefreshFunc(d, attribute, meta),
+		Refresh:    newSBMStateRefreshFunc(ctx, d, attribute, meta),
 		Timeout:    d.Timeout(timeoutKey),
 		Delay:      10 * time.Second,
 		MinTimeout: 10 * time.Second,
@@ -319,11 +315,11 @@ func waitForSBMAttribute(ctx context.Context, d *schema.ResourceData, target str
 	return stateConf.WaitForStateContext(ctx)
 }
 
-func newSBMStateRefreshFunc(d *schema.ResourceData, attribute string, meta any) retry.StateRefreshFunc {
+func newSBMStateRefreshFunc(ctx context.Context, d *schema.ResourceData, attribute string, meta any) retry.StateRefreshFunc {
 	return func() (any, string, error) {
-		err := resourceServerscomSBMRead(d, meta)
-		if err != nil {
-			return nil, "", err
+		diags := resourceServerscomSBMRead(ctx, d, meta)
+		if diags.HasError() {
+			return nil, "", errors.New(diags[0].Summary)
 		}
 
 		// See if we can access our attribute
@@ -340,8 +336,8 @@ func newSBMStateRefreshFunc(d *schema.ResourceData, attribute string, meta any) 
 	}
 }
 
-func getSBMOperatingSystem(locationID int64, sbmFlavorModelID int64, name string) (*scgo.OperatingSystemOption, error) {
-	operatingSystems, err := cache.SBMOperatingSystems(locationID, sbmFlavorModelID)
+func getSBMOperatingSystem(ctx context.Context, locationID int64, sbmFlavorModelID int64, name string) (*scgo.OperatingSystemOption, error) {
+	operatingSystems, err := cache.SBMOperatingSystems(ctx, locationID, sbmFlavorModelID)
 	if err != nil {
 		return nil, err
 	}
@@ -357,8 +353,8 @@ func getSBMOperatingSystem(locationID int64, sbmFlavorModelID int64, name string
 	return nil, fmt.Errorf("can't find operating system by: %s", name)
 }
 
-func getSBMFlavor(regionID int64, name string) (*scgo.SBMFlavor, error) {
-	flavors, err := cache.SBMFlavors(regionID)
+func getSBMFlavor(ctx context.Context, regionID int64, name string) (*scgo.SBMFlavor, error) {
+	flavors, err := cache.SBMFlavors(ctx, regionID)
 	if err != nil {
 		return nil, err
 	}

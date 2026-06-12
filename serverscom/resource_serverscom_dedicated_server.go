@@ -2,12 +2,14 @@ package serverscom
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"sort"
 	"strconv"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -21,10 +23,10 @@ var (
 
 func resourceServerscomDedicatedServer() *schema.Resource {
 	return &schema.Resource{
-		Read:   resourceServerscomDedicatedServerRead,
-		Update: resourceServerscomDedicatedServerUpdate,
-		Delete: resourceServerscomDedicatedServerDelete,
-		Create: resourceServerscomDedicatedServerCreate,
+		ReadContext:   resourceServerscomDedicatedServerRead,
+		UpdateContext: resourceServerscomDedicatedServerUpdate,
+		DeleteContext: resourceServerscomDedicatedServerDelete,
+		CreateContext: resourceServerscomDedicatedServerCreate,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -200,10 +202,8 @@ func resourceServerscomDedicatedServer() *schema.Resource {
 	}
 }
 
-func resourceServerscomDedicatedServerRead(d *schema.ResourceData, meta any) error {
+func resourceServerscomDedicatedServerRead(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*scgo.Client)
-
-	ctx := context.TODO()
 
 	dedicatedServer, err := client.Hosts.GetDedicatedServer(ctx, d.Id())
 	if err != nil {
@@ -213,7 +213,7 @@ func resourceServerscomDedicatedServerRead(d *schema.ResourceData, meta any) err
 			d.SetId("")
 			return nil
 		default:
-			return fmt.Errorf("error retrieving dedicated server: %s", err)
+			return diag.Errorf("error retrieving dedicated server: %s", err)
 		}
 	}
 
@@ -243,7 +243,7 @@ func resourceServerscomDedicatedServerRead(d *schema.ResourceData, meta any) err
 
 	slots, err := client.Hosts.DedicatedServerDriveSlots(d.Id()).Collect(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	driveSlots := getDriveSlots(slots)
@@ -267,7 +267,7 @@ func resourceServerscomDedicatedServerRead(d *schema.ResourceData, meta any) err
 	return nil
 }
 
-func resourceServerscomDedicatedServerUpdate(d *schema.ResourceData, meta any) error {
+func resourceServerscomDedicatedServerUpdate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	input := scgo.DedicatedServerUpdateInput{}
 
 	hasChanges := false
@@ -292,21 +292,19 @@ func resourceServerscomDedicatedServerUpdate(d *schema.ResourceData, meta any) e
 
 	if hasChanges {
 		client := meta.(*scgo.Client)
-		ctx := context.TODO()
 
 		if _, err := client.Hosts.UpdateDedicatedServer(ctx, d.Id(), input); err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 
-		return resourceServerscomDedicatedServerRead(d, meta)
+		return resourceServerscomDedicatedServerRead(ctx, d, meta)
 	}
 
 	return nil
 }
 
-func resourceServerscomDedicatedServerDelete(d *schema.ResourceData, meta any) error {
+func resourceServerscomDedicatedServerDelete(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*scgo.Client)
-	ctx := context.TODO()
 
 	dedicatedServer, err := client.Hosts.GetDedicatedServer(ctx, d.Id())
 	if err != nil {
@@ -316,7 +314,7 @@ func resourceServerscomDedicatedServerDelete(d *schema.ResourceData, meta any) e
 			d.SetId("")
 			return nil
 		default:
-			return fmt.Errorf("error retrieving dedicated server: %s", err.Error())
+			return diag.Errorf("error retrieving dedicated server: %s", err.Error())
 		}
 	}
 
@@ -329,18 +327,18 @@ func resourceServerscomDedicatedServerDelete(d *schema.ResourceData, meta any) e
 	if dedicatedServer.Status == "pending" || dedicatedServer.Status == "init" {
 		_, err = waitForDedicatedServerAttribute(ctx, d, "active", []string{"init", "pending"}, "status", meta, schema.TimeoutDelete)
 		if err != nil {
-			return fmt.Errorf("error waiting for dedicated server (%s) to become ready: %s", d.Id(), err)
+			return diag.Errorf("error waiting for dedicated server (%s) to become ready: %s", d.Id(), err)
 		}
 	}
 
 	if _, err := client.Hosts.ScheduleReleaseForDedicatedServer(ctx, d.Id(), scgo.ScheduleReleaseInput{}); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
 }
 
-func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta any) error {
+func resourceServerscomDedicatedServerCreate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	var (
 		location        *scgo.Location
 		serverModel     *scgo.ServerModelOption
@@ -386,16 +384,16 @@ func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta any) e
 		input.Hosts[0].Labels = stringLabels
 	}
 
-	location, err = getLocation(d.Get("location").(string))
+	location, err = getLocation(ctx, d.Get("location").(string))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	input.LocationID = location.ID
 
-	serverModel, err = getServerModel(location.ID, d.Get("server_model").(string))
+	serverModel, err = getServerModel(ctx, location.ID, d.Get("server_model").(string))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	input.ServerModelID = serverModel.ID
@@ -407,9 +405,9 @@ func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta any) e
 	}
 
 	if operatingSystemName, ok := d.GetOk("operating_system"); ok {
-		operatingSystem, err = getOperatingSystem(location.ID, serverModel.ID, operatingSystemName.(string))
+		operatingSystem, err = getOperatingSystem(ctx, location.ID, serverModel.ID, operatingSystemName.(string))
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 
 		input.OperatingSystemID = &operatingSystem.ID
@@ -418,9 +416,9 @@ func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta any) e
 	input.UplinkModels = scgo.DedicatedServerUplinkModelsInput{}
 
 	if publicUplinkName, ok := d.GetOk("public_uplink"); ok {
-		publicUplink, err = getUplink(location.ID, serverModel.ID, publicUplinkName.(string))
+		publicUplink, err = getUplink(ctx, location.ID, serverModel.ID, publicUplinkName.(string))
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 
 		input.UplinkModels.Public = &scgo.DedicatedServerPublicUplinkInput{}
@@ -428,32 +426,32 @@ func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta any) e
 	}
 
 	if bandwidthName, ok := d.GetOk("bandwidth"); ok && publicUplink != nil {
-		bandwidth, err = getBandwidth(location.ID, serverModel.ID, publicUplink.ID, bandwidthName.(string))
+		bandwidth, err = getBandwidth(ctx, location.ID, serverModel.ID, publicUplink.ID, bandwidthName.(string))
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 
 		input.UplinkModels.Public.BandwidthModelID = bandwidth.ID
 	} else if !ok && publicUplink != nil {
-		return fmt.Errorf("bandwidth must be specified, when public uplink is present")
+		return diag.Errorf("bandwidth must be specified, when public uplink is present")
 	}
 
-	privateUplink, err = getUplink(location.ID, serverModel.ID, d.Get("private_uplink").(string))
+	privateUplink, err = getUplink(ctx, location.ID, serverModel.ID, d.Get("private_uplink").(string))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	input.UplinkModels.Private.ID = privateUplink.ID
 
-	slots, err = getSlots(d, location.ID, serverModel.ID)
+	slots, err = getSlots(ctx, d, location.ID, serverModel.ID)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	// TODO: Populate slots from model when len(slots) is zero
 	err = verifySlots(slots)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	input.Drives.Slots = slots
@@ -475,34 +473,32 @@ func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta any) e
 		input.UserData = &userDataValue
 	}
 
-	ctx := context.TODO()
-
 	resultChan, err := serverCollector.AddRequest(ctx, "dedicated", input)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	// waiting for result from collector
 	result := <-resultChan
 	if result.Error != nil {
-		return result.Error
+		return diag.FromErr(result.Error)
 	}
 
 	if result.Servers.Count() == 0 {
-		return fmt.Errorf("invalid dedicated servers count returned by api")
+		return diag.Errorf("invalid dedicated servers count returned by api")
 	}
 
 	// find corresponding server by title matching hostname
 	id := result.Servers.GetIdByHostname(hostname)
 	if id == "" {
-		return fmt.Errorf("can't find the server with title '%s' in api response", hostname)
+		return diag.Errorf("can't find the server with title '%s' in api response", hostname)
 	}
 
 	d.SetId(id)
 
 	_, err = waitForDedicatedServerAttribute(ctx, d, "active", []string{"init", "pending"}, "status", meta, schema.TimeoutCreate)
 	if err != nil {
-		return fmt.Errorf("error waiting for dedicated server (%s) to become ready: %s", d.Id(), err)
+		return diag.Errorf("error waiting for dedicated server (%s) to become ready: %s", d.Id(), err)
 	}
 
 	return nil
@@ -528,8 +524,8 @@ func getDriveSlots(slots []scgo.HostDriveSlot) []map[string]any {
 	return driveSlots
 }
 
-func getLocation(code string) (*scgo.Location, error) {
-	locations, err := cache.Locations()
+func getLocation(ctx context.Context, code string) (*scgo.Location, error) {
+	locations, err := cache.Locations(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -543,8 +539,8 @@ func getLocation(code string) (*scgo.Location, error) {
 	return nil, fmt.Errorf("can't find location by: %s", code)
 }
 
-func getServerModel(locationID int64, name string) (*scgo.ServerModelOption, error) {
-	serverModels, err := cache.ServerModels(locationID)
+func getServerModel(ctx context.Context, locationID int64, name string) (*scgo.ServerModelOption, error) {
+	serverModels, err := cache.ServerModels(ctx, locationID)
 	if err != nil {
 		return nil, err
 	}
@@ -558,8 +554,8 @@ func getServerModel(locationID int64, name string) (*scgo.ServerModelOption, err
 	return nil, fmt.Errorf("can't find server model by: %s", name)
 }
 
-func getDriveModel(locationID int64, serverModelID int64, name string) (*scgo.DriveModel, error) {
-	driveModels, err := cache.DriveModels(locationID, serverModelID)
+func getDriveModel(ctx context.Context, locationID int64, serverModelID int64, name string) (*scgo.DriveModel, error) {
+	driveModels, err := cache.DriveModels(ctx, locationID, serverModelID)
 	if err != nil {
 		return nil, err
 	}
@@ -573,8 +569,8 @@ func getDriveModel(locationID int64, serverModelID int64, name string) (*scgo.Dr
 	return nil, fmt.Errorf("can't find drive model by: %s", name)
 }
 
-func getOperatingSystem(locationID int64, serverModelID int64, name string) (*scgo.OperatingSystemOption, error) {
-	operatingSystems, err := cache.OperatingSystems(locationID, serverModelID)
+func getOperatingSystem(ctx context.Context, locationID int64, serverModelID int64, name string) (*scgo.OperatingSystemOption, error) {
+	operatingSystems, err := cache.OperatingSystems(ctx, locationID, serverModelID)
 	if err != nil {
 		return nil, err
 	}
@@ -590,8 +586,8 @@ func getOperatingSystem(locationID int64, serverModelID int64, name string) (*sc
 	return nil, fmt.Errorf("can't find operating system by: %s", name)
 }
 
-func getUplink(locationID int64, serverModelID int64, name string) (*scgo.UplinkOption, error) {
-	uplinks, err := cache.Uplinks(locationID, serverModelID)
+func getUplink(ctx context.Context, locationID int64, serverModelID int64, name string) (*scgo.UplinkOption, error) {
+	uplinks, err := cache.Uplinks(ctx, locationID, serverModelID)
 	if err != nil {
 		return nil, err
 	}
@@ -605,8 +601,8 @@ func getUplink(locationID int64, serverModelID int64, name string) (*scgo.Uplink
 	return nil, fmt.Errorf("can't find uplink by: %s", name)
 }
 
-func getBandwidth(locationID int64, serverModelID int64, uplinkModelID int64, name string) (*scgo.BandwidthOption, error) {
-	bandwidthList, err := cache.Bandwidth(locationID, serverModelID, uplinkModelID)
+func getBandwidth(ctx context.Context, locationID int64, serverModelID int64, uplinkModelID int64, name string) (*scgo.BandwidthOption, error) {
+	bandwidthList, err := cache.Bandwidth(ctx, locationID, serverModelID, uplinkModelID)
 	if err != nil {
 		return nil, err
 	}
@@ -620,7 +616,7 @@ func getBandwidth(locationID int64, serverModelID int64, uplinkModelID int64, na
 	return nil, fmt.Errorf("can't find bandwidth by: %s", name)
 }
 
-func getSlots(d *schema.ResourceData, locationID int64, serverModelID int64) ([]scgo.DedicatedServerSlotInput, error) {
+func getSlots(ctx context.Context, d *schema.ResourceData, locationID int64, serverModelID int64) ([]scgo.DedicatedServerSlotInput, error) {
 	var slotsInput []scgo.DedicatedServerSlotInput
 
 	if slotsList, ok := d.GetOk("slot"); ok {
@@ -630,7 +626,7 @@ func getSlots(d *schema.ResourceData, locationID int64, serverModelID int64) ([]
 			var driveModelID *int64
 
 			if value, ok := slot["drive_model"]; ok && len(value.(string)) != 0 {
-				driveModel, err := getDriveModel(locationID, serverModelID, value.(string))
+				driveModel, err := getDriveModel(ctx, locationID, serverModelID, value.(string))
 				if err != nil {
 					return nil, err
 				}
@@ -728,7 +724,7 @@ func waitForDedicatedServerAttribute(ctx context.Context, d *schema.ResourceData
 	stateConf := &retry.StateChangeConf{
 		Pending:      pending,
 		Target:       []string{target},
-		Refresh:      newDedicatedServerStateRefreshFunc(d, attribute, meta),
+		Refresh:      newDedicatedServerStateRefreshFunc(ctx, d, attribute, meta),
 		Timeout:      d.Timeout(timeoutKey),
 		PollInterval: 1 * time.Minute,
 		Delay:        1 * time.Minute,
@@ -737,11 +733,11 @@ func waitForDedicatedServerAttribute(ctx context.Context, d *schema.ResourceData
 	return stateConf.WaitForStateContext(ctx)
 }
 
-func newDedicatedServerStateRefreshFunc(d *schema.ResourceData, attribute string, meta any) retry.StateRefreshFunc {
+func newDedicatedServerStateRefreshFunc(ctx context.Context, d *schema.ResourceData, attribute string, meta any) retry.StateRefreshFunc {
 	return func() (any, string, error) {
-		err := resourceServerscomDedicatedServerRead(d, meta)
-		if err != nil {
-			return nil, "", err
+		diags := resourceServerscomDedicatedServerRead(ctx, d, meta)
+		if diags.HasError() {
+			return nil, "", errors.New(diags[0].Summary)
 		}
 
 		// See if we can access our attribute

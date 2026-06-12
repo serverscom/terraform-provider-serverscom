@@ -2,11 +2,13 @@ package serverscom
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -19,10 +21,10 @@ var (
 
 func resourceServerscomCloudComputingInstance() *schema.Resource {
 	return &schema.Resource{
-		Read:   resourceServerscomCloudComputingInstanceRead,
-		Update: resourceServerscomCloudComputingInstanceUpdate,
-		Delete: resourceServerscomCloudComputingInstanceDelete,
-		Create: resourceServerscomCloudComputingInstanceCreate,
+		ReadContext:   resourceServerscomCloudComputingInstanceRead,
+		UpdateContext: resourceServerscomCloudComputingInstanceUpdate,
+		DeleteContext: resourceServerscomCloudComputingInstanceDelete,
+		CreateContext: resourceServerscomCloudComputingInstanceCreate,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -125,14 +127,12 @@ func resourceServerscomCloudComputingInstance() *schema.Resource {
 	}
 }
 
-func resourceServerscomCloudComputingInstanceRead(d *schema.ResourceData, meta any) error {
+func resourceServerscomCloudComputingInstanceRead(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*scgo.Client)
-
-	ctx := context.TODO()
 
 	cloudInstance, err := client.CloudComputingInstances.Get(ctx, d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.Set("status", cloudInstance.Status)
@@ -158,7 +158,7 @@ func resourceServerscomCloudComputingInstanceRead(d *schema.ResourceData, meta a
 	return nil
 }
 
-func resourceServerscomCloudComputingInstanceUpdate(d *schema.ResourceData, meta any) error {
+func resourceServerscomCloudComputingInstanceUpdate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	var err error
 
 	client := meta.(*scgo.Client)
@@ -200,12 +200,10 @@ func resourceServerscomCloudComputingInstanceUpdate(d *schema.ResourceData, meta
 		}
 	}
 
-	ctx := context.TODO()
-
 	if hasChanges {
 		_, err = client.CloudComputingInstances.Update(ctx, d.Id(), updateInput)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
@@ -215,13 +213,13 @@ func resourceServerscomCloudComputingInstanceUpdate(d *schema.ResourceData, meta
 
 	if d.HasChange("flavor") {
 		hasChanges = true
-		region, err := getRegion(d.Get("region").(string))
+		region, err := getRegion(ctx, d.Get("region").(string))
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
-		flavor, err := getFlavor(region.ID, d.Get("flavor").(string))
+		flavor, err := getFlavor(ctx, region.ID, d.Get("flavor").(string))
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 
 		upgradeInput.FlavorID = flavor.ID
@@ -230,17 +228,15 @@ func resourceServerscomCloudComputingInstanceUpdate(d *schema.ResourceData, meta
 	if hasChanges {
 		_, err = client.CloudComputingInstances.Upgrade(ctx, d.Id(), upgradeInput)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
-	return resourceServerscomCloudComputingInstanceRead(d, meta)
+	return resourceServerscomCloudComputingInstanceRead(ctx, d, meta)
 }
 
-func resourceServerscomCloudComputingInstanceDelete(d *schema.ResourceData, meta any) error {
+func resourceServerscomCloudComputingInstanceDelete(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*scgo.Client)
-
-	ctx := context.TODO()
 
 	cloudInstance, err := client.CloudComputingInstances.Get(ctx, d.Id())
 	if err != nil {
@@ -250,7 +246,7 @@ func resourceServerscomCloudComputingInstanceDelete(d *schema.ResourceData, meta
 			d.SetId("")
 			return nil
 		default:
-			return fmt.Errorf("error retrieving cloud computing instance: %s", err.Error())
+			return diag.Errorf("error retrieving cloud computing instance: %s", err.Error())
 		}
 	}
 
@@ -260,32 +256,36 @@ func resourceServerscomCloudComputingInstanceDelete(d *schema.ResourceData, meta
 		return nil
 	}
 
-	return client.CloudComputingInstances.Delete(ctx, d.Id())
+	if err := client.CloudComputingInstances.Delete(ctx, d.Id()); err != nil {
+		return diag.FromErr(err)
+	}
+
+	return nil
 }
 
-func resourceServerscomCloudComputingInstanceCreate(d *schema.ResourceData, meta any) error {
+func resourceServerscomCloudComputingInstanceCreate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*scgo.Client)
 
 	input := scgo.CloudComputingInstanceCreateInput{}
 	input.Name = d.Get("name").(string)
 
-	region, err := getRegion(d.Get("region").(string))
+	region, err := getRegion(ctx, d.Get("region").(string))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	input.RegionID = region.ID
 
-	flavor, err := getFlavor(region.ID, d.Get("flavor").(string))
+	flavor, err := getFlavor(ctx, region.ID, d.Get("flavor").(string))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	input.FlavorID = flavor.ID
 
-	image, err := getImage(region.ID, d.Get("image").(string))
+	image, err := getImage(ctx, region.ID, d.Get("image").(string))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	input.ImageID = image.ID
@@ -325,11 +325,9 @@ func resourceServerscomCloudComputingInstanceCreate(d *schema.ResourceData, meta
 		input.UserData = &userData
 	}
 
-	ctx := context.TODO()
-
 	cloudInstance, err := client.CloudComputingInstances.Create(ctx, input)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.SetId(cloudInstance.ID)
@@ -337,7 +335,7 @@ func resourceServerscomCloudComputingInstanceCreate(d *schema.ResourceData, meta
 	pending := []string{"CREATING", "PENDING", "PROVISIONING", "BUILDING", "REBOOTING"}
 	_, err = waitForCloudComputingInstanceAttribute(ctx, d, "ACTIVE", pending, "status", meta, schema.TimeoutCreate)
 	if err != nil {
-		return fmt.Errorf("error waiting for cloud computing instance (%s) to become active: %s", d.Id(), err)
+		return diag.Errorf("error waiting for cloud computing instance (%s) to become active: %s", d.Id(), err)
 	}
 
 	return nil
@@ -352,7 +350,7 @@ func waitForCloudComputingInstanceAttribute(ctx context.Context, d *schema.Resou
 	stateConf := &retry.StateChangeConf{
 		Pending:    pending,
 		Target:     []string{target},
-		Refresh:    newCloudComputingInstanceStateRefreshFunc(d, attribute, meta),
+		Refresh:    newCloudComputingInstanceStateRefreshFunc(ctx, d, attribute, meta),
 		Timeout:    d.Timeout(timeoutKey),
 		Delay:      1 * time.Minute,
 		MinTimeout: 3 * time.Second,
@@ -361,11 +359,11 @@ func waitForCloudComputingInstanceAttribute(ctx context.Context, d *schema.Resou
 	return stateConf.WaitForStateContext(ctx)
 }
 
-func newCloudComputingInstanceStateRefreshFunc(d *schema.ResourceData, attribute string, meta any) retry.StateRefreshFunc {
+func newCloudComputingInstanceStateRefreshFunc(ctx context.Context, d *schema.ResourceData, attribute string, meta any) retry.StateRefreshFunc {
 	return func() (any, string, error) {
-		err := resourceServerscomCloudComputingInstanceRead(d, meta)
-		if err != nil {
-			return nil, "", err
+		diags := resourceServerscomCloudComputingInstanceRead(ctx, d, meta)
+		if diags.HasError() {
+			return nil, "", errors.New(diags[0].Summary)
 		}
 
 		// See if we can access our attribute
@@ -382,8 +380,8 @@ func newCloudComputingInstanceStateRefreshFunc(d *schema.ResourceData, attribute
 	}
 }
 
-func getRegion(code string) (*scgo.CloudComputingRegion, error) {
-	regions, err := cache.CloudComputingRegions()
+func getRegion(ctx context.Context, code string) (*scgo.CloudComputingRegion, error) {
+	regions, err := cache.CloudComputingRegions(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -397,8 +395,8 @@ func getRegion(code string) (*scgo.CloudComputingRegion, error) {
 	return nil, fmt.Errorf("can't find cloud computing region by: %s", code)
 }
 
-func getFlavor(regionID int64, name string) (*scgo.CloudComputingFlavor, error) {
-	flavors, err := cache.CloudComputingFlavors(regionID)
+func getFlavor(ctx context.Context, regionID int64, name string) (*scgo.CloudComputingFlavor, error) {
+	flavors, err := cache.CloudComputingFlavors(ctx, regionID)
 	if err != nil {
 		return nil, err
 	}
@@ -412,8 +410,8 @@ func getFlavor(regionID int64, name string) (*scgo.CloudComputingFlavor, error) 
 	return nil, fmt.Errorf("can't find cloud computing flavor by: %s", name)
 }
 
-func getImage(regionID int64, name string) (*scgo.CloudComputingImage, error) {
-	images, err := cache.CloudComputingImages(regionID)
+func getImage(ctx context.Context, regionID int64, name string) (*scgo.CloudComputingImage, error) {
+	images, err := cache.CloudComputingImages(ctx, regionID)
 	if err != nil {
 		return nil, err
 	}

@@ -2,10 +2,10 @@ package serverscom
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	scgo "github.com/serverscom/serverscom-go-client/pkg"
@@ -13,10 +13,10 @@ import (
 
 func resourceServerscomSSHKey() *schema.Resource {
 	return &schema.Resource{
-		Read:   resourceServerscomSSHKeyRead,
-		Update: resourceServerscomSSHKeyUpdate,
-		Delete: resourceServerscomSSHKeyDelete,
-		Create: resourceServerscomSSHKeyCreate,
+		ReadContext:   resourceServerscomSSHKeyRead,
+		UpdateContext: resourceServerscomSSHKeyUpdate,
+		DeleteContext: resourceServerscomSSHKeyDelete,
+		CreateContext: resourceServerscomSSHKeyCreate,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -51,13 +51,12 @@ func resourceServerscomSSHKey() *schema.Resource {
 	}
 }
 
-func resourceServerscomSSHKeyRead(d *schema.ResourceData, meta any) error {
+func resourceServerscomSSHKeyRead(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*scgo.Client)
-	ctx := context.TODO()
 
 	sshKey, err := client.SSHKeys.Get(ctx, d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.Set("name", sshKey.Name)
@@ -67,12 +66,11 @@ func resourceServerscomSSHKeyRead(d *schema.ResourceData, meta any) error {
 	return nil
 }
 
-func resourceServerscomSSHKeyUpdate(d *schema.ResourceData, meta any) error {
+func resourceServerscomSSHKeyUpdate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*scgo.Client)
-	ctx := context.TODO()
 
 	if _, err := client.SSHKeys.Get(ctx, d.Id()); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	var newName string
@@ -95,15 +93,14 @@ func resourceServerscomSSHKeyUpdate(d *schema.ResourceData, meta any) error {
 	}
 
 	if _, err := client.SSHKeys.Update(ctx, d.Id(), input); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	return resourceServerscomSSHKeyRead(d, meta)
+	return resourceServerscomSSHKeyRead(ctx, d, meta)
 }
 
-func resourceServerscomSSHKeyDelete(d *schema.ResourceData, meta any) error {
+func resourceServerscomSSHKeyDelete(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*scgo.Client)
-	ctx := context.TODO()
 
 	err := client.SSHKeys.Delete(ctx, d.Id())
 	if err != nil {
@@ -113,16 +110,15 @@ func resourceServerscomSSHKeyDelete(d *schema.ResourceData, meta any) error {
 			d.SetId("")
 			return nil
 		default:
-			return fmt.Errorf("error retrieving ssh key: %s", err.Error())
+			return diag.Errorf("error retrieving ssh key: %s", err.Error())
 		}
 	}
 
 	return nil
 }
 
-func resourceServerscomSSHKeyCreate(d *schema.ResourceData, meta any) error {
+func resourceServerscomSSHKeyCreate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*scgo.Client)
-	ctx := context.TODO()
 
 	input := scgo.SSHKeyCreateInput{}
 	input.PublicKey = d.Get("public_key").(string)
@@ -139,12 +135,12 @@ func resourceServerscomSSHKeyCreate(d *schema.ResourceData, meta any) error {
 
 	sshKey, err := client.SSHKeys.Create(ctx, input)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.SetId(sshKey.Fingerprint)
 
-	return resourceServerscomSSHKeyRead(d, meta)
+	return resourceServerscomSSHKeyRead(ctx, d, meta)
 }
 
 func resourceServerscomSSHKeyPublicKeyDiffSuppress(k, old, new string, d *schema.ResourceData) bool {
