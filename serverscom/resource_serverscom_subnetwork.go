@@ -82,19 +82,19 @@ func resourceServerscomSubnetworkUpdate(ctx context.Context, d *schema.ResourceD
 
 	networkPoolID := d.Get("network_pool_id").(string)
 
-	var newTitle *string
-	if v, ok := d.GetOk("title"); ok {
-		title := v.(string)
-		newTitle = &title
-	} else {
-		newTitle = nil
-	}
+	if d.HasChange("title") {
+		var newTitle *string
+		if v, ok := d.GetOk("title"); ok {
+			title := v.(string)
+			newTitle = &title
+		}
 
-	input := scgo.SubnetworkUpdateInput{}
-	input.Title = newTitle
+		input := scgo.SubnetworkUpdateInput{}
+		input.Title = newTitle
 
-	if _, err := client.NetworkPools.UpdateSubnetwork(ctx, networkPoolID, d.Id(), input); err != nil {
-		return diag.FromErr(err)
+		if _, err := client.NetworkPools.UpdateSubnetwork(ctx, networkPoolID, d.Id(), input); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	return resourceServerscomSubnetworkRead(ctx, d, meta)
