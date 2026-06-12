@@ -58,7 +58,7 @@ func datasourceServerscomNetworkPoolRead(ctx context.Context, d *schema.Resource
 		foundNetworkPool = networkPool
 	}
 
-	flattenNetworkPool, err := flattenServerscomNetworkPool(foundNetworkPool, meta, nil)
+	flattenNetworkPool, err := flattenServerscomNetworkPool(foundNetworkPool)
 	if err != nil {
 		return diag.FromErr(err)
 	}

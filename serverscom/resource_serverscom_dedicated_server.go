@@ -719,14 +719,6 @@ func getLayouts(d *schema.ResourceData) []scgo.DedicatedServerLayoutInput {
 	return layoutInput
 }
 
-func verifyLayouts(layouts []scgo.DedicatedServerLayoutInput) error {
-	if len(layouts) == 0 {
-		return fmt.Errorf("at least one layout must be specified")
-	}
-
-	return nil
-}
-
 func waitForDedicatedServerAttribute(ctx context.Context, d *schema.ResourceData, target string, pending []string, attribute string, meta any, timeoutKey string) (any, error) {
 	log.Printf(
 		"[INFO] Waiting for dedicated server (%s) to have %s of %s",
