@@ -132,7 +132,14 @@ func resourceServerscomCloudComputingInstanceRead(ctx context.Context, d *schema
 
 	cloudInstance, err := client.CloudComputingInstances.Get(ctx, d.Id())
 	if err != nil {
-		return diag.FromErr(err)
+		switch err.(type) {
+		case *scgo.NotFoundError:
+			log.Printf("[WARN] Serverscom cloud computing instance (%s) not found", d.Id())
+			d.SetId("")
+			return nil
+		default:
+			return diag.Errorf("error retrieving cloud computing instance: %s", err)
+		}
 	}
 
 	d.Set("status", cloudInstance.Status)

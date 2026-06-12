@@ -56,7 +56,14 @@ func resourceServerscomSSHKeyRead(ctx context.Context, d *schema.ResourceData, m
 
 	sshKey, err := client.SSHKeys.Get(ctx, d.Id())
 	if err != nil {
-		return diag.FromErr(err)
+		switch err.(type) {
+		case *scgo.NotFoundError:
+			log.Printf("[WARN] Serverscom ssh key (%s) not found", d.Id())
+			d.SetId("")
+			return nil
+		default:
+			return diag.Errorf("error retrieving ssh key: %s", err)
+		}
 	}
 
 	d.Set("name", sshKey.Name)
