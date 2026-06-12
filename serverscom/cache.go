@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"sync"
 
-	lru "github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru/v2"
 	scgo "github.com/serverscom/serverscom-go-client/pkg"
 )
 
 var cache *Cache
 
 func NewCache(cli *scgo.Client) *Cache {
-	newLru, err := lru.New(100)
+	newLru, err := lru.New[string, any](100)
 	if err != nil {
 		panic(err)
 	}
@@ -26,7 +26,7 @@ func NewCache(cli *scgo.Client) *Cache {
 
 type Cache struct {
 	client *scgo.Client
-	lru    *lru.Cache
+	lru    *lru.Cache[string, any]
 	ctx    context.Context
 
 	sync.Mutex
