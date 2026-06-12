@@ -63,7 +63,7 @@ func Provider() *schema.Provider {
 	}
 }
 
-func providerConfigure(d *schema.ResourceData) (interface{}, error) {
+func providerConfigure(d *schema.ResourceData) (any, error) {
 	client := scgo.NewClientWithEndpoint(
 		d.Get("token").(string),
 		d.Get("endpoint").(string),

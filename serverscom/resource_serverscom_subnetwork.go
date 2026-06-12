@@ -45,7 +45,7 @@ func resourceServerscomSubnetwork() *schema.Resource {
 	}
 }
 
-func resourceServerscomSubnetworkRead(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomSubnetworkRead(d *schema.ResourceData, meta any) error {
 	client := meta.(*scgo.Client)
 	ctx := context.TODO()
 
@@ -78,7 +78,7 @@ func resourceServerscomSubnetworkRead(d *schema.ResourceData, meta interface{}) 
 	return nil
 }
 
-func resourceServerscomSubnetworkUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomSubnetworkUpdate(d *schema.ResourceData, meta any) error {
 	client := meta.(*scgo.Client)
 	ctx := context.TODO()
 
@@ -102,7 +102,7 @@ func resourceServerscomSubnetworkUpdate(d *schema.ResourceData, meta interface{}
 	return resourceServerscomSubnetworkRead(d, meta)
 }
 
-func resourceServerscomSubnetworkDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomSubnetworkDelete(d *schema.ResourceData, meta any) error {
 	client := meta.(*scgo.Client)
 	ctx := context.TODO()
 
@@ -122,7 +122,7 @@ func resourceServerscomSubnetworkDelete(d *schema.ResourceData, meta interface{}
 	return client.NetworkPools.DeleteSubnetwork(ctx, networkPoolID, d.Id())
 }
 
-func resourceServerscomSubnetworkCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomSubnetworkCreate(d *schema.ResourceData, meta any) error {
 	client := meta.(*scgo.Client)
 	ctx := context.TODO()
 

@@ -82,7 +82,7 @@ func resourceServerscomRBSVolumeCreate(ctx context.Context, d *schema.ResourceDa
 		FlavorID:   d.Get("flavor_id").(int),
 	}
 	if labelsRaw, ok := d.GetOk("labels"); ok {
-		input.Labels = toStringMap(labelsRaw.(map[string]interface{}))
+		input.Labels = toStringMap(labelsRaw.(map[string]any))
 	}
 
 	vol, err := client.RemoteBlockStorageVolumes.Create(ctx, input)
@@ -155,7 +155,7 @@ func resourceServerscomRBSVolumeUpdate(ctx context.Context, d *schema.ResourceDa
 	}
 	if d.HasChange("labels") {
 		if labelsRaw, ok := d.GetOk("labels"); ok {
-			input.Labels = toStringMap(labelsRaw.(map[string]interface{}))
+			input.Labels = toStringMap(labelsRaw.(map[string]any))
 		} else {
 			input.Labels = map[string]string{}
 		}
@@ -183,7 +183,7 @@ func resourceServerscomRBSVolumeUpdate(ctx context.Context, d *schema.ResourceDa
 	return resourceServerscomRBSVolumeRead(ctx, d, meta)
 }
 
-func resourceServerscomRBSVolumeDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceServerscomRBSVolumeDelete(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*scgo.Client)
 
 	err := client.RemoteBlockStorageVolumes.Delete(ctx, d.Id())
@@ -206,7 +206,7 @@ func resourceServerscomRBSVolumeDelete(ctx context.Context, d *schema.ResourceDa
 	return nil
 }
 
-func toStringMap(m map[string]interface{}) map[string]string {
+func toStringMap(m map[string]any) map[string]string {
 	out := make(map[string]string, len(m))
 	for k, v := range m {
 		out[k] = v.(string)
@@ -231,8 +231,8 @@ func waitForRBSVolumeAttribute(ctx context.Context, d *schema.ResourceData, targ
 	return stateConf.WaitForStateContext(ctx)
 }
 
-func newRBSVolumeStateRefreshFunc(ctx context.Context, d *schema.ResourceData, attribute string, meta interface{}) retry.StateRefreshFunc {
-	return func() (interface{}, string, error) {
+func newRBSVolumeStateRefreshFunc(ctx context.Context, d *schema.ResourceData, attribute string, meta any) retry.StateRefreshFunc {
+	return func() (any, string, error) {
 		diags := resourceServerscomRBSVolumeRead(ctx, d, meta)
 
 		if diags.HasError() {

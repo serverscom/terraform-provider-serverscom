@@ -125,7 +125,7 @@ func resourceServerscomCloudComputingInstance() *schema.Resource {
 	}
 }
 
-func resourceServerscomCloudComputingInstanceRead(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomCloudComputingInstanceRead(d *schema.ResourceData, meta any) error {
 	client := meta.(*scgo.Client)
 
 	ctx := context.TODO()
@@ -158,7 +158,7 @@ func resourceServerscomCloudComputingInstanceRead(d *schema.ResourceData, meta i
 	return nil
 }
 
-func resourceServerscomCloudComputingInstanceUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomCloudComputingInstanceUpdate(d *schema.ResourceData, meta any) error {
 	var err error
 
 	client := meta.(*scgo.Client)
@@ -191,7 +191,7 @@ func resourceServerscomCloudComputingInstanceUpdate(d *schema.ResourceData, meta
 	if d.HasChange("labels") {
 		hasChanges = true
 		if labelsRaw, ok := d.GetOk("labels"); ok {
-			labels := labelsRaw.(map[string]interface{})
+			labels := labelsRaw.(map[string]any)
 			stringLabels := make(map[string]string)
 			for k, v := range labels {
 				stringLabels[k] = v.(string)
@@ -237,7 +237,7 @@ func resourceServerscomCloudComputingInstanceUpdate(d *schema.ResourceData, meta
 	return resourceServerscomCloudComputingInstanceRead(d, meta)
 }
 
-func resourceServerscomCloudComputingInstanceDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomCloudComputingInstanceDelete(d *schema.ResourceData, meta any) error {
 	client := meta.(*scgo.Client)
 
 	ctx := context.TODO()
@@ -263,7 +263,7 @@ func resourceServerscomCloudComputingInstanceDelete(d *schema.ResourceData, meta
 	return client.CloudComputingInstances.Delete(ctx, d.Id())
 }
 
-func resourceServerscomCloudComputingInstanceCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomCloudComputingInstanceCreate(d *schema.ResourceData, meta any) error {
 	client := meta.(*scgo.Client)
 
 	input := scgo.CloudComputingInstanceCreateInput{}
@@ -312,7 +312,7 @@ func resourceServerscomCloudComputingInstanceCreate(d *schema.ResourceData, meta
 	}
 
 	if labelsRaw, ok := d.GetOk("labels"); ok {
-		labels := labelsRaw.(map[string]interface{})
+		labels := labelsRaw.(map[string]any)
 		stringLabels := make(map[string]string)
 		for k, v := range labels {
 			stringLabels[k] = v.(string)
@@ -343,7 +343,7 @@ func resourceServerscomCloudComputingInstanceCreate(d *schema.ResourceData, meta
 	return nil
 }
 
-func waitForCloudComputingInstanceAttribute(ctx context.Context, d *schema.ResourceData, target string, pending []string, attribute string, meta interface{}, timeoutKey string) (interface{}, error) {
+func waitForCloudComputingInstanceAttribute(ctx context.Context, d *schema.ResourceData, target string, pending []string, attribute string, meta any, timeoutKey string) (any, error) {
 	log.Printf(
 		"[INFO] Waiting for cloud computing instance (%s) to have %s of %s",
 		d.Id(), attribute, target,
@@ -361,8 +361,8 @@ func waitForCloudComputingInstanceAttribute(ctx context.Context, d *schema.Resou
 	return stateConf.WaitForStateContext(ctx)
 }
 
-func newCloudComputingInstanceStateRefreshFunc(d *schema.ResourceData, attribute string, meta interface{}) retry.StateRefreshFunc {
-	return func() (interface{}, string, error) {
+func newCloudComputingInstanceStateRefreshFunc(d *schema.ResourceData, attribute string, meta any) retry.StateRefreshFunc {
+	return func() (any, string, error) {
 		err := resourceServerscomCloudComputingInstanceRead(d, meta)
 		if err != nil {
 			return nil, "", err

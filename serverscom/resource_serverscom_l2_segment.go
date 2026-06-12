@@ -111,7 +111,7 @@ func resourceServerscomL2Segment() *schema.Resource {
 	}
 }
 
-func resourceServerscomL2SegmentRead(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomL2SegmentRead(d *schema.ResourceData, meta any) error {
 	client := meta.(*scgo.Client)
 
 	ctx := context.TODO()
@@ -158,7 +158,7 @@ func resourceServerscomL2SegmentRead(d *schema.ResourceData, meta interface{}) e
 	return nil
 }
 
-func resourceServerscomL2SegmentUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomL2SegmentUpdate(d *schema.ResourceData, meta any) error {
 	input := scgo.L2SegmentUpdateInput{}
 
 	if d.HasChange("name") {
@@ -172,7 +172,7 @@ func resourceServerscomL2SegmentUpdate(d *schema.ResourceData, meta interface{})
 
 	if d.HasChange("labels") {
 		if labelsRaw, ok := d.GetOk("labels"); ok {
-			labels := labelsRaw.(map[string]interface{})
+			labels := labelsRaw.(map[string]any)
 			stringLabels := make(map[string]string)
 			for k, v := range labels {
 				stringLabels[k] = v.(string)
@@ -204,7 +204,7 @@ func resourceServerscomL2SegmentUpdate(d *schema.ResourceData, meta interface{})
 	return nil
 }
 
-func resourceServerscomL2SegmentDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomL2SegmentDelete(d *schema.ResourceData, meta any) error {
 	client := meta.(*scgo.Client)
 
 	ctx := context.TODO()
@@ -236,7 +236,7 @@ func resourceServerscomL2SegmentDelete(d *schema.ResourceData, meta interface{})
 	return client.L2Segments.Delete(ctx, d.Id())
 }
 
-func resourceServerscomL2SegmentCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomL2SegmentCreate(d *schema.ResourceData, meta any) error {
 	client := meta.(*scgo.Client)
 
 	ctx := context.TODO()
@@ -256,7 +256,7 @@ func resourceServerscomL2SegmentCreate(d *schema.ResourceData, meta interface{})
 	input.Members = getSchemaMembers(d)
 
 	if labelsRaw, ok := d.GetOk("labels"); ok {
-		labels := labelsRaw.(map[string]interface{})
+		labels := labelsRaw.(map[string]any)
 		stringLabels := make(map[string]string)
 		for k, v := range labels {
 			stringLabels[k] = v.(string)
@@ -278,11 +278,11 @@ func resourceServerscomL2SegmentCreate(d *schema.ResourceData, meta interface{})
 	return nil
 }
 
-func getMembers(members []scgo.L2Member) []map[string]interface{} {
-	l2Members := make([]map[string]interface{}, 0)
+func getMembers(members []scgo.L2Member) []map[string]any {
+	l2Members := make([]map[string]any, 0)
 
 	for _, member := range members {
-		var currentMember = make(map[string]interface{})
+		var currentMember = make(map[string]any)
 
 		currentMember["id"] = member.ID
 		currentMember["mode"] = member.Mode
@@ -297,7 +297,7 @@ func getMembers(members []scgo.L2Member) []map[string]interface{} {
 	return l2Members
 }
 
-func waitForL2SegmentAttribute(ctx context.Context, d *schema.ResourceData, target string, pending []string, attribute string, meta interface{}, timeoutKey string) (interface{}, error) {
+func waitForL2SegmentAttribute(ctx context.Context, d *schema.ResourceData, target string, pending []string, attribute string, meta any, timeoutKey string) (any, error) {
 	log.Printf(
 		"[INFO] Waiting for l2 segment (%s) to have %s of %s",
 		d.Id(), attribute, target,
@@ -315,8 +315,8 @@ func waitForL2SegmentAttribute(ctx context.Context, d *schema.ResourceData, targ
 	return stateConf.WaitForStateContext(ctx)
 }
 
-func newL2SegmentStateRefreshFunc(d *schema.ResourceData, attribute string, meta interface{}) retry.StateRefreshFunc {
-	return func() (interface{}, string, error) {
+func newL2SegmentStateRefreshFunc(d *schema.ResourceData, attribute string, meta any) retry.StateRefreshFunc {
+	return func() (any, string, error) {
 		err := resourceServerscomL2SegmentRead(d, meta)
 		if err != nil {
 			return nil, "", err
@@ -355,7 +355,7 @@ func getSchemaMembers(d *schema.ResourceData) []scgo.L2SegmentMemberInput {
 	var members []scgo.L2SegmentMemberInput
 
 	for _, memberMap := range d.Get("member").(*schema.Set).List() {
-		member := memberMap.(map[string]interface{})
+		member := memberMap.(map[string]any)
 
 		currentMember := scgo.L2SegmentMemberInput{}
 		currentMember.ID = member["id"].(string)

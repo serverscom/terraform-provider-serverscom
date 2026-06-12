@@ -51,7 +51,7 @@ func resourceServerscomSSHKey() *schema.Resource {
 	}
 }
 
-func resourceServerscomSSHKeyRead(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomSSHKeyRead(d *schema.ResourceData, meta any) error {
 	client := meta.(*scgo.Client)
 	ctx := context.TODO()
 
@@ -67,7 +67,7 @@ func resourceServerscomSSHKeyRead(d *schema.ResourceData, meta interface{}) erro
 	return nil
 }
 
-func resourceServerscomSSHKeyUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomSSHKeyUpdate(d *schema.ResourceData, meta any) error {
 	client := meta.(*scgo.Client)
 	ctx := context.TODO()
 
@@ -85,7 +85,7 @@ func resourceServerscomSSHKeyUpdate(d *schema.ResourceData, meta interface{}) er
 
 	if d.HasChange("labels") {
 		if labelsRaw, ok := d.GetOk("labels"); ok {
-			labels := labelsRaw.(map[string]interface{})
+			labels := labelsRaw.(map[string]any)
 			stringLabels := make(map[string]string)
 			for k, v := range labels {
 				stringLabels[k] = v.(string)
@@ -101,7 +101,7 @@ func resourceServerscomSSHKeyUpdate(d *schema.ResourceData, meta interface{}) er
 	return resourceServerscomSSHKeyRead(d, meta)
 }
 
-func resourceServerscomSSHKeyDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomSSHKeyDelete(d *schema.ResourceData, meta any) error {
 	client := meta.(*scgo.Client)
 	ctx := context.TODO()
 
@@ -120,7 +120,7 @@ func resourceServerscomSSHKeyDelete(d *schema.ResourceData, meta interface{}) er
 	return nil
 }
 
-func resourceServerscomSSHKeyCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomSSHKeyCreate(d *schema.ResourceData, meta any) error {
 	client := meta.(*scgo.Client)
 	ctx := context.TODO()
 
@@ -129,7 +129,7 @@ func resourceServerscomSSHKeyCreate(d *schema.ResourceData, meta interface{}) er
 	input.Name = d.Get("name").(string)
 
 	if labelsRaw, ok := d.GetOk("labels"); ok {
-		labels := labelsRaw.(map[string]interface{})
+		labels := labelsRaw.(map[string]any)
 		stringLabels := make(map[string]string)
 		for k, v := range labels {
 			stringLabels[k] = v.(string)

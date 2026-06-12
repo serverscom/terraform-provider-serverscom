@@ -109,7 +109,7 @@ func resourceServerscomSBM() *schema.Resource {
 	}
 }
 
-func resourceServerscomSBMRead(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomSBMRead(d *schema.ResourceData, meta any) error {
 	client := meta.(*scgo.Client)
 
 	ctx := context.TODO()
@@ -141,14 +141,14 @@ func resourceServerscomSBMRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func resourceServerscomSBMUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomSBMUpdate(d *schema.ResourceData, meta any) error {
 	input := scgo.SBMServerUpdateInput{}
 
 	hasChanges := false
 	if d.HasChange("labels") {
 		hasChanges = true
 		if labelsRaw, ok := d.GetOk("labels"); ok {
-			labels := labelsRaw.(map[string]interface{})
+			labels := labelsRaw.(map[string]any)
 			stringLabels := make(map[string]string)
 			for k, v := range labels {
 				stringLabels[k] = v.(string)
@@ -171,7 +171,7 @@ func resourceServerscomSBMUpdate(d *schema.ResourceData, meta interface{}) error
 	return nil
 }
 
-func resourceServerscomSBMDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomSBMDelete(d *schema.ResourceData, meta any) error {
 	client := meta.(*scgo.Client)
 	ctx := context.TODO()
 
@@ -201,7 +201,7 @@ func resourceServerscomSBMDelete(d *schema.ResourceData, meta interface{}) error
 	return nil
 }
 
-func resourceServerscomSBMCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomSBMCreate(d *schema.ResourceData, meta any) error {
 	var (
 		publicIpv4NetworkId  *string
 		privateIpv4NetworkId *string
@@ -228,7 +228,7 @@ func resourceServerscomSBMCreate(d *schema.ResourceData, meta interface{}) error
 		},
 	}
 	if labelsRaw, ok := d.GetOk("labels"); ok {
-		labels := labelsRaw.(map[string]interface{})
+		labels := labelsRaw.(map[string]any)
 		stringLabels := make(map[string]string)
 		for k, v := range labels {
 			stringLabels[k] = v.(string)
@@ -260,7 +260,7 @@ func resourceServerscomSBMCreate(d *schema.ResourceData, meta interface{}) error
 	}
 
 	if val, ok := d.GetOk("ssh_key_fingerprints"); ok {
-		input.SSHKeyFingerprints = expandedStringList(val.([]interface{}))
+		input.SSHKeyFingerprints = expandedStringList(val.([]any))
 	}
 
 	if userData, ok := d.GetOk("user_data"); ok {
@@ -301,7 +301,7 @@ func resourceServerscomSBMCreate(d *schema.ResourceData, meta interface{}) error
 	return nil
 }
 
-func waitForSBMAttribute(ctx context.Context, d *schema.ResourceData, target string, pending []string, attribute string, meta interface{}, timeoutKey string) (interface{}, error) {
+func waitForSBMAttribute(ctx context.Context, d *schema.ResourceData, target string, pending []string, attribute string, meta any, timeoutKey string) (any, error) {
 	log.Printf(
 		"[INFO] Waiting for SBM server (%s) to have %s of %s",
 		d.Id(), attribute, target,
@@ -319,8 +319,8 @@ func waitForSBMAttribute(ctx context.Context, d *schema.ResourceData, target str
 	return stateConf.WaitForStateContext(ctx)
 }
 
-func newSBMStateRefreshFunc(d *schema.ResourceData, attribute string, meta interface{}) retry.StateRefreshFunc {
-	return func() (interface{}, string, error) {
+func newSBMStateRefreshFunc(d *schema.ResourceData, attribute string, meta any) retry.StateRefreshFunc {
+	return func() (any, string, error) {
 		err := resourceServerscomSBMRead(d, meta)
 		if err != nil {
 			return nil, "", err
@@ -378,8 +378,8 @@ type SBMServerCreateInput struct {
 }
 
 // GetHosts returns hosts from server input
-func (s *SBMServerCreateInput) GetHosts() []interface{} {
-	hosts := make([]interface{}, len(s.Hosts))
+func (s *SBMServerCreateInput) GetHosts() []any {
+	hosts := make([]any, len(s.Hosts))
 	for i, h := range s.Hosts {
 		hosts[i] = h
 	}
@@ -387,7 +387,7 @@ func (s *SBMServerCreateInput) GetHosts() []interface{} {
 }
 
 // SetHosts sets hosts for server create input
-func (s *SBMServerCreateInput) SetHosts(hosts []interface{}) {
+func (s *SBMServerCreateInput) SetHosts(hosts []any) {
 	if hosts == nil {
 		s.Hosts = nil
 		return

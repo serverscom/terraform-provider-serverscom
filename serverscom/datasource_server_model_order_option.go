@@ -123,9 +123,9 @@ func dataSourceServerscomServerModelOrderOptionRead(d *schema.ResourceData, meta
 	d.Set("raid_controller_name", option.RAIDControllerName)
 	d.Set("drive_slots_count", option.DriveSlotsCount)
 
-	var driveSlots []map[string]interface{}
+	var driveSlots []map[string]any
 	for _, slot := range option.DriveSlots {
-		driveSlot := map[string]interface{}{
+		driveSlot := map[string]any{
 			"position":       slot.Position,
 			"interface":      slot.Interface,
 			"form_factor":    slot.FormFactor,

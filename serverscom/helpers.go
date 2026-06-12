@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func expandIntList(elements []interface{}) []int {
+func expandIntList(elements []any) []int {
 	expandedIntList := make([]int, len(elements))
 	for i, v := range elements {
 		expandedIntList[i] = v.(int)
@@ -15,7 +15,7 @@ func expandIntList(elements []interface{}) []int {
 	return expandedIntList
 }
 
-func expandedStringList(elements []interface{}) []string {
+func expandedStringList(elements []any) []string {
 	expandedStringList := make([]string, len(elements))
 	for i, v := range elements {
 		expandedStringList[i] = v.(string)

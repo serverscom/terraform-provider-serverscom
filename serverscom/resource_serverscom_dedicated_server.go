@@ -200,7 +200,7 @@ func resourceServerscomDedicatedServer() *schema.Resource {
 	}
 }
 
-func resourceServerscomDedicatedServerRead(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomDedicatedServerRead(d *schema.ResourceData, meta any) error {
 	client := meta.(*scgo.Client)
 
 	ctx := context.TODO()
@@ -267,14 +267,14 @@ func resourceServerscomDedicatedServerRead(d *schema.ResourceData, meta interfac
 	return nil
 }
 
-func resourceServerscomDedicatedServerUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomDedicatedServerUpdate(d *schema.ResourceData, meta any) error {
 	input := scgo.DedicatedServerUpdateInput{}
 
 	hasChanges := false
 	if d.HasChange("labels") {
 		hasChanges = true
 		if labelsRaw, ok := d.GetOk("labels"); ok {
-			labels := labelsRaw.(map[string]interface{})
+			labels := labelsRaw.(map[string]any)
 			stringLabels := make(map[string]string)
 			for k, v := range labels {
 				stringLabels[k] = v.(string)
@@ -304,7 +304,7 @@ func resourceServerscomDedicatedServerUpdate(d *schema.ResourceData, meta interf
 	return nil
 }
 
-func resourceServerscomDedicatedServerDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomDedicatedServerDelete(d *schema.ResourceData, meta any) error {
 	client := meta.(*scgo.Client)
 	ctx := context.TODO()
 
@@ -340,7 +340,7 @@ func resourceServerscomDedicatedServerDelete(d *schema.ResourceData, meta interf
 	return nil
 }
 
-func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta any) error {
 	var (
 		location        *scgo.Location
 		serverModel     *scgo.ServerModelOption
@@ -378,7 +378,7 @@ func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta interf
 		},
 	}
 	if labelsRaw, ok := d.GetOk("labels"); ok {
-		labels := labelsRaw.(map[string]interface{})
+		labels := labelsRaw.(map[string]any)
 		stringLabels := make(map[string]string)
 		for k, v := range labels {
 			stringLabels[k] = v.(string)
@@ -463,7 +463,7 @@ func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta interf
 	input.Drives.Layout = layouts
 
 	if val, ok := d.GetOk("ssh_key_fingerprints"); ok {
-		input.SSHKeyFingerprints = expandedStringList(val.([]interface{}))
+		input.SSHKeyFingerprints = expandedStringList(val.([]any))
 	}
 
 	if ipv6, ok := d.GetOk("ipv6"); ok {
@@ -508,11 +508,11 @@ func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta interf
 	return nil
 }
 
-func getDriveSlots(slots []scgo.HostDriveSlot) []map[string]interface{} {
-	driveSlots := make([]map[string]interface{}, 0)
+func getDriveSlots(slots []scgo.HostDriveSlot) []map[string]any {
+	driveSlots := make([]map[string]any, 0)
 
 	for _, slot := range slots {
-		var currentSlot = make(map[string]interface{})
+		var currentSlot = make(map[string]any)
 
 		currentSlot["position"] = slot.Position
 
@@ -624,8 +624,8 @@ func getSlots(d *schema.ResourceData, locationID int64, serverModelID int64) ([]
 	var slotsInput []scgo.DedicatedServerSlotInput
 
 	if slotsList, ok := d.GetOk("slot"); ok {
-		for _, slotSchema := range slotsList.([]interface{}) {
-			slot := slotSchema.(map[string]interface{})
+		for _, slotSchema := range slotsList.([]any) {
+			slot := slotSchema.(map[string]any)
 
 			var driveModelID *int64
 
@@ -674,11 +674,11 @@ func getLayouts(d *schema.ResourceData) []scgo.DedicatedServerLayoutInput {
 	var layoutInput []scgo.DedicatedServerLayoutInput
 
 	if layoutsList, ok := d.GetOk("layout"); ok {
-		for _, layoutSchema := range layoutsList.([]interface{}) {
-			layout := layoutSchema.(map[string]interface{})
+		for _, layoutSchema := range layoutsList.([]any) {
+			layout := layoutSchema.(map[string]any)
 
 			currentLayout := scgo.DedicatedServerLayoutInput{}
-			currentLayout.SlotPositions = expandIntList(layout["slot_positions"].([]interface{}))
+			currentLayout.SlotPositions = expandIntList(layout["slot_positions"].([]any))
 
 			if len(currentLayout.SlotPositions) > 1 {
 				raidLevel := layout["raid"].(int)
@@ -687,10 +687,10 @@ func getLayouts(d *schema.ResourceData) []scgo.DedicatedServerLayoutInput {
 
 			currentLayout.Partitions = []scgo.DedicatedServerLayoutPartitionInput{}
 
-			partitionsList := layout["partition"].([]interface{})
+			partitionsList := layout["partition"].([]any)
 
 			for _, partitionSchema := range partitionsList {
-				partition := partitionSchema.(map[string]interface{})
+				partition := partitionSchema.(map[string]any)
 
 				currentPartition := scgo.DedicatedServerLayoutPartitionInput{}
 				currentPartition.Target = partition["target"].(string)
@@ -727,7 +727,7 @@ func verifyLayouts(layouts []scgo.DedicatedServerLayoutInput) error {
 	return nil
 }
 
-func waitForDedicatedServerAttribute(ctx context.Context, d *schema.ResourceData, target string, pending []string, attribute string, meta interface{}, timeoutKey string) (interface{}, error) {
+func waitForDedicatedServerAttribute(ctx context.Context, d *schema.ResourceData, target string, pending []string, attribute string, meta any, timeoutKey string) (any, error) {
 	log.Printf(
 		"[INFO] Waiting for dedicated server (%s) to have %s of %s",
 		d.Id(), attribute, target,
@@ -745,8 +745,8 @@ func waitForDedicatedServerAttribute(ctx context.Context, d *schema.ResourceData
 	return stateConf.WaitForStateContext(ctx)
 }
 
-func newDedicatedServerStateRefreshFunc(d *schema.ResourceData, attribute string, meta interface{}) retry.StateRefreshFunc {
-	return func() (interface{}, string, error) {
+func newDedicatedServerStateRefreshFunc(d *schema.ResourceData, attribute string, meta any) retry.StateRefreshFunc {
+	return func() (any, string, error) {
 		err := resourceServerscomDedicatedServerRead(d, meta)
 		if err != nil {
 			return nil, "", err
@@ -772,8 +772,8 @@ type DedicatedServerCreateInput struct {
 }
 
 // GetHosts returns hosts from server input
-func (d *DedicatedServerCreateInput) GetHosts() []interface{} {
-	hosts := make([]interface{}, len(d.Hosts))
+func (d *DedicatedServerCreateInput) GetHosts() []any {
+	hosts := make([]any, len(d.Hosts))
 	for i, h := range d.Hosts {
 		hosts[i] = h
 	}
@@ -781,7 +781,7 @@ func (d *DedicatedServerCreateInput) GetHosts() []interface{} {
 }
 
 // SetHosts sets hosts for server create input
-func (d *DedicatedServerCreateInput) SetHosts(hosts []interface{}) {
+func (d *DedicatedServerCreateInput) SetHosts(hosts []any) {
 	if hosts == nil {
 		d.Hosts = nil
 		return

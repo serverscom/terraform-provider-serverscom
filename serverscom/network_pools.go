@@ -36,10 +36,10 @@ func networkPoolSchema() map[string]*schema.Schema {
 	}
 }
 
-func flattenServerscomNetworkPool(rawNetworkPool, meta interface{}, extra map[string]interface{}) (map[string]interface{}, error) {
+func flattenServerscomNetworkPool(rawNetworkPool, meta any, extra map[string]any) (map[string]any, error) {
 	networkPool := rawNetworkPool.(*scgo.NetworkPool)
 
-	flattenNetworkPool := map[string]interface{}{
+	flattenNetworkPool := map[string]any{
 		"id":         networkPool.ID,
 		"title":      networkPool.Title,
 		"type":       networkPool.Type,
