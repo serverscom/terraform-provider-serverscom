@@ -21,12 +21,12 @@ var (
 	serverscomDedicatedServerDefaultUpdateTimeout = 4 * time.Hour
 	serverscomDedicatedServerDefaultDeleteTimeout = 1 * time.Hour
 
-	// dedicatedServerReinstallTriggers are the fields that can only be applied
+	// dedicatedServerReinstallFields are the fields that can only be applied
 	// through an OS reinstall (which destroys all data on disk). Changing any of
 	// them requires bumping reinstall_trigger to acknowledge the reinstall.
 	// ssh_key_fingerprints and user_data are intentionally NOT here: they are
 	// applied in-place via the API (and also passed into the reinstall payload).
-	dedicatedServerReinstallTriggers = []string{"operating_system", "layout"}
+	dedicatedServerReinstallFields = []string{"operating_system", "layout"}
 )
 
 func resourceServerscomDedicatedServer() *schema.Resource {
@@ -245,7 +245,7 @@ func resourceServerscomDedicatedServerCustomizeDiff(_ context.Context, d *schema
 	}
 
 	var changedTriggers []string
-	for _, field := range dedicatedServerReinstallTriggers {
+	for _, field := range dedicatedServerReinstallFields {
 		if d.HasChange(field) {
 			changedTriggers = append(changedTriggers, field)
 		}
