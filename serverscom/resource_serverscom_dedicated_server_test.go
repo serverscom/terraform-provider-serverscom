@@ -203,8 +203,6 @@ func TestAccServerscomDedicatedServer_Reinstall(t *testing.T) {
 					testAccServerscomCheckDedicatedServerExists("serverscom_dedicated_server.node", &dedicatedServer),
 					resource.TestCheckResourceAttr(
 						"serverscom_dedicated_server.node", "reinstall_trigger", "none"),
-					resource.TestCheckResourceAttr(
-						"serverscom_dedicated_server.node", "reinstall_pending", "false"),
 				),
 			},
 			{

@@ -104,7 +104,6 @@ The following attributes are exported:
 - `public_ipv4_address` - (string) Public IPv4 address.
 - `status` - (string) Status of the dedicated server.
 - `operational_status` - (string) Operational status of the dedicated server. After a reinstall the provider waits for this to return to `normal`.
-- `reinstall_pending` - (bool) Set to `true` in the plan when the current change will perform an OS reinstall.
 - `labels` - (map) A map of labels assigned to the dedicated server.
 
 ## Reinstalling the OS
@@ -114,12 +113,12 @@ A reinstall reprovisions the operating system and **destroys all data on disk**,
 - `reinstall_trigger` defaults to `none`. While it stays `none`, no reinstall is performed.
 - Changing `reinstall_trigger` to any other value (e.g. `"1"`, `"2024-06-redeploy"`) performs a reinstall using the current `operating_system`, `layout`, `ssh_key_fingerprints` and `user_data`. This also lets you re-run a reinstall without changing anything else — just bump the value again.
 - `operating_system` and `layout` can only be applied through a reinstall. Changing either of them **without** also changing `reinstall_trigger` fails the plan with an explanatory error. Change `reinstall_trigger` in the same plan to acknowledge and apply.
-- `ssh_key_fingerprints` and `user_data` are applied in place (without a reinstall) and are additionally included in the reinstall payload.
-- When a reinstall will run, the plan shows `reinstall_pending` flipping to `true`.
+- `user_data` is applied in place (without a reinstall) and is additionally included in the reinstall payload.
+- `ssh_key_fingerprints` is sent with the reinstall payload (so a reinstall provisions the freshly installed OS with the configured keys). Changing it on its own does not trigger a reinstall and only takes effect on the next reinstall.
 
 First-time adoption is safe: simply adding `reinstall_trigger` to an existing resource (its default `none`) does not trigger a reinstall.
 
-The provider waits for `operational_status` to become `normal` after a reinstall. The wait is bounded by the `update` timeout (default `4h`):
+The provider waits for `operational_status` to become `normal` after a reinstall. It also waits for `normal` before applying any change, because the API rejects reinstall/update requests while a previous operation is still running. The wait is bounded by the `update` timeout (default `4h`):
 
 ```hcl
 resource "serverscom_dedicated_server" "node_1" {
