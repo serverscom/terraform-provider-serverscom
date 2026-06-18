@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -156,4 +157,113 @@ func testAccServerscomCheckDedicatedServerDestroy(s *terraform.State) error {
 	}
 
 	return nil
+}
+
+func TestDedicatedServerWillReinstall(t *testing.T) {
+	cases := []struct {
+		name       string
+		oldTrigger string
+		newTrigger string
+		want       bool
+	}{
+		{"unchanged none", "none", "none", false},
+		{"first adoption keeps none", "none", "none", false},
+		{"empty to none is a no-op", "", "none", false},
+		{"reset back to none", "1", "none", false},
+		{"unchanged value", "1", "1", false},
+		{"bump from none", "none", "1", true},
+		{"bump between values", "1", "2", true},
+		{"explicit set from empty", "", "1", true},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := dedicatedServerWillReinstall(tc.oldTrigger, tc.newTrigger)
+			if got != tc.want {
+				t.Fatalf("dedicatedServerWillReinstall(%q, %q) = %v, want %v",
+					tc.oldTrigger, tc.newTrigger, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestAccServerscomDedicatedServer_Reinstall(t *testing.T) {
+	var dedicatedServer scgo.DedicatedServer
+	rInt := acctest.RandInt()
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccServerscomPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccServerscomCheckDedicatedServerDestroy,
+		Steps: []resource.TestStep{
+			{
+				// Create with reinstall_trigger at its default "none".
+				Config: testAccServerscomCheckDedicatedServerConfig_reinstall(rInt, "Ubuntu 22.04-server x86_64", "none"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccServerscomCheckDedicatedServerExists("serverscom_dedicated_server.node", &dedicatedServer),
+					resource.TestCheckResourceAttr(
+						"serverscom_dedicated_server.node", "reinstall_trigger", "none"),
+					resource.TestCheckResourceAttr(
+						"serverscom_dedicated_server.node", "reinstall_pending", "false"),
+				),
+			},
+			{
+				// Changing operating_system without bumping reinstall_trigger must fail the plan.
+				Config:      testAccServerscomCheckDedicatedServerConfig_reinstall(rInt, "Ubuntu 24.04-server x86_64", "none"),
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile("requires an OS reinstall"),
+			},
+			{
+				// Bumping reinstall_trigger acknowledges and performs the reinstall.
+				Config: testAccServerscomCheckDedicatedServerConfig_reinstall(rInt, "Ubuntu 24.04-server x86_64", "1"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccServerscomCheckDedicatedServerExists("serverscom_dedicated_server.node", &dedicatedServer),
+					resource.TestCheckResourceAttr(
+						"serverscom_dedicated_server.node", "operating_system", "Ubuntu 24.04-server x86_64"),
+					resource.TestCheckResourceAttr(
+						"serverscom_dedicated_server.node", "reinstall_trigger", "1"),
+					resource.TestCheckResourceAttr(
+						"serverscom_dedicated_server.node", "operational_status", "normal"),
+				),
+			},
+		},
+	})
+}
+
+func testAccServerscomCheckDedicatedServerConfig_reinstall(rInt int, operatingSystem, reinstallTrigger string) string {
+	return fmt.Sprintf(`
+resource "serverscom_dedicated_server" "node" {
+	bandwidth            = "19.1 TB"
+	hostname             = "node-%d"
+	location             = "SJC1"
+	operating_system     = "%s"
+	reinstall_trigger    = "%s"
+	private_uplink       = "Private 10 Gbps with redundancy"
+	public_uplink        = "Public 10 Gbps with redundancy"
+	ram_size             = 32
+	server_model         = "Dell R440 / 2xIntel Xeon Silver-4114 / 32 GB RAM / 1x480 GB SSD"
+
+	slot {
+		drive_model = "480 GB SSD SATA"
+		position    = 0
+	}
+
+	layout {
+		slot_positions = [0]
+
+		partition {
+			target = "/"
+			size = 10240
+			fill = false
+			fs = "ext4"
+		}
+
+		partition {
+			target = "swap"
+			size = 4096
+			fill = false
+		}
+	}
+}
+`, rInt, operatingSystem, reinstallTrigger)
 }

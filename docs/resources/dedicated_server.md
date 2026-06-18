@@ -75,7 +75,8 @@ The following arguments are supported:
 - `ssh_key_fingerprints` - (Optional, list) SSH key fingerprint.
 - `private_ipv4_network_id` - (Optional, string) Private IPv4 network ID.
 - `public_ipv4_network_id` - (Optional, string) Public IPv4 network ID.
-- `user_data` - (Optional, string) A string of the desired user data for the dedicated server.
+- `user_data` - (Optional, string, sensitive) A string of the desired user data for the dedicated server. It is applied in-place and is also sent with every OS reinstall. Changing it no longer recreates the server. Because the raw value is needed to update it in place, it is stored in the Terraform state (mark it carefully / use a remote backend if it contains secrets).
+- `reinstall_trigger` - (Optional, string) An opt-in marker that performs an OS reinstall. Defaults to `none`. Changing it to any other value reinstalls the operating system, which **destroys all data on disk**. Changing `operating_system` or `layout` requires also changing `reinstall_trigger` in the same plan, otherwise the plan fails. See [Reinstalling the OS](#reinstalling-the-os).
 - `ipv6` - (Optional, bool) Is IPv6 enabled. Defaults to `false`.
 - `slot` - (Optional, list) List of drive slots. Slots used in partioning have to be listed.
 - `slot.0.position` - (Required, int) Slot position.
@@ -102,7 +103,35 @@ The following attributes are exported:
 - `private_ipv4_address` - (string) Private IPv4 address.
 - `public_ipv4_address` - (string) Public IPv4 address.
 - `status` - (string) Status of the dedicated server.
+- `operational_status` - (string) Operational status of the dedicated server. After a reinstall the provider waits for this to return to `normal`.
+- `reinstall_pending` - (bool) Set to `true` in the plan when the current change will perform an OS reinstall.
 - `labels` - (map) A map of labels assigned to the dedicated server.
+
+## Reinstalling the OS
+
+A reinstall reprovisions the operating system and **destroys all data on disk**, so it never happens implicitly. It is gated by the `reinstall_trigger` argument:
+
+- `reinstall_trigger` defaults to `none`. While it stays `none`, no reinstall is performed.
+- Changing `reinstall_trigger` to any other value (e.g. `"1"`, `"2024-06-redeploy"`) performs a reinstall using the current `operating_system`, `layout`, `ssh_key_fingerprints` and `user_data`. This also lets you re-run a reinstall without changing anything else — just bump the value again.
+- `operating_system` and `layout` can only be applied through a reinstall. Changing either of them **without** also changing `reinstall_trigger` fails the plan with an explanatory error. Change `reinstall_trigger` in the same plan to acknowledge and apply.
+- `ssh_key_fingerprints` and `user_data` are applied in place (without a reinstall) and are additionally included in the reinstall payload.
+- When a reinstall will run, the plan shows `reinstall_pending` flipping to `true`.
+
+First-time adoption is safe: simply adding `reinstall_trigger` to an existing resource (its default `none`) does not trigger a reinstall.
+
+The provider waits for `operational_status` to become `normal` after a reinstall. The wait is bounded by the `update` timeout (default `4h`):
+
+```hcl
+resource "serverscom_dedicated_server" "node_1" {
+  # ...
+  operating_system  = "Ubuntu 24.04-server x86_64"
+  reinstall_trigger = "1"
+
+  timeouts {
+    update = "2h"
+  }
+}
+```
 
 ## Import
 
