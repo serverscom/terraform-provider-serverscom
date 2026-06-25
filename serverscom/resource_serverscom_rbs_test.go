@@ -30,13 +30,13 @@ func testSweepRBSVolumes(region string) error {
 	log.Printf("[DEBUG] Sweeping RBS volumes")
 	client, err := createClient()
 	if err != nil {
-		return fmt.Errorf("Error getting client for sweeping RBS volumes: %s", err)
+		return fmt.Errorf("error getting client for sweeping RBS volumes: %s", err)
 	}
 
 	ctx := context.TODO()
 	volumes, err := client.RemoteBlockStorageVolumes.Collection().Collect(ctx)
 	if err != nil {
-		return fmt.Errorf("Error getting list of RBS volumes: %s", err)
+		return fmt.Errorf("error getting list of RBS volumes: %s", err)
 	}
 
 	for _, volume := range volumes {
@@ -45,7 +45,7 @@ func testSweepRBSVolumes(region string) error {
 		}
 		err := client.RemoteBlockStorageVolumes.Delete(ctx, volume.ID)
 		if err != nil {
-			return fmt.Errorf("Can't delete RBS volume (%s): %s", volume.ID, err)
+			return fmt.Errorf("can't delete RBS volume (%s): %s", volume.ID, err)
 		}
 	}
 
@@ -223,11 +223,11 @@ func testAccServerscomCheckRBSVolumeExists(n string, rbsVolume *scgo.RemoteBlock
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
-			return fmt.Errorf("Not found: %s", n)
+			return fmt.Errorf("not found: %s", n)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("No RBS volume ID is set")
+			return fmt.Errorf("no RBS volume ID is set")
 		}
 
 		client := testAccProvider.Meta().(*scgo.Client)
@@ -255,7 +255,7 @@ func testAccServerscomCheckRBSVolumeDestroy(s *terraform.State) error {
 			case *scgo.NotFoundError:
 				return nil
 			default:
-				return fmt.Errorf("Error retrieving RBS volume: %s", err)
+				return fmt.Errorf("error retrieving RBS volume: %s", err)
 			}
 		}
 

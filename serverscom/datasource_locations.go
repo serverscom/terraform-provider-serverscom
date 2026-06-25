@@ -93,7 +93,7 @@ func dataSourceServerscomLocationsRead(d *schema.ResourceData, meta any) error {
 
 	locations, err := collection.Collect(ctx)
 	if err != nil {
-		return fmt.Errorf("Error retrieving locations: %s", err.Error())
+		return fmt.Errorf("error retrieving locations: %s", err.Error())
 	}
 
 	locationList := make([]map[string]any, 0, len(locations))
@@ -113,7 +113,7 @@ func dataSourceServerscomLocationsRead(d *schema.ResourceData, meta any) error {
 
 	d.SetId(id)
 	if err := d.Set("locations", locationList); err != nil {
-		return fmt.Errorf("Error setting locations: %s", err.Error())
+		return fmt.Errorf("error setting locations: %s", err.Error())
 	}
 
 	return nil

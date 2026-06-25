@@ -87,7 +87,7 @@ func dataSourceServerscomSbmFlavorOrderOptionRead(d *schema.ResourceData, meta a
 
 	flavor, err := client.Locations.GetSBMFlavorOption(ctx, int64(locationID), int64(sbmFlavorID))
 	if err != nil {
-		return fmt.Errorf("Error retrieving SBM flavor order option: %s", err.Error())
+		return fmt.Errorf("error retrieving SBM flavor order option: %s", err.Error())
 	}
 
 	d.SetId(strconv.Itoa(int(flavor.ID)))

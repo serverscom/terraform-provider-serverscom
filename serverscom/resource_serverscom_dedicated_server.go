@@ -2,12 +2,14 @@ package serverscom
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"sort"
 	"strconv"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -16,21 +18,30 @@ import (
 
 var (
 	serverscomDedicatedServerDefaultCreateTimeout = 24 * time.Hour
+	serverscomDedicatedServerDefaultUpdateTimeout = 4 * time.Hour
 	serverscomDedicatedServerDefaultDeleteTimeout = 1 * time.Hour
+
+	// dedicatedServerReinstallFields are the fields that can only be applied
+	// through an OS reinstall (which destroys all data on disk). Changing any of
+	// them requires bumping reinstall_trigger to acknowledge the reinstall.
+	// ssh_key_fingerprints and user_data are intentionally NOT here: they are
+	// applied in-place via the API (and also passed into the reinstall payload).
+	dedicatedServerReinstallFields = []string{"operating_system", "layout"}
 )
 
 func resourceServerscomDedicatedServer() *schema.Resource {
 	return &schema.Resource{
-		Read:   resourceServerscomDedicatedServerRead,
-		Update: resourceServerscomDedicatedServerUpdate,
-		Delete: resourceServerscomDedicatedServerDelete,
-		Create: resourceServerscomDedicatedServerCreate,
+		ReadContext:   resourceServerscomDedicatedServerRead,
+		UpdateContext: resourceServerscomDedicatedServerUpdate,
+		DeleteContext: resourceServerscomDedicatedServerDelete,
+		CreateContext: resourceServerscomDedicatedServerCreate,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(serverscomDedicatedServerDefaultCreateTimeout),
+			Update: schema.DefaultTimeout(serverscomDedicatedServerDefaultUpdateTimeout),
 			Delete: schema.DefaultTimeout(serverscomDedicatedServerDefaultDeleteTimeout),
 		},
 
@@ -156,12 +167,8 @@ func resourceServerscomDedicatedServer() *schema.Resource {
 			"user_data": {
 				Type:         schema.TypeString,
 				Optional:     true,
-				ForceNew:     true,
+				Sensitive:    true,
 				ValidateFunc: validation.NoZeroValues,
-				StateFunc:    HashStringStateFunc(),
-				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-					return new != "" && old == d.Get("user_data")
-				},
 			},
 			"configuration": {
 				Type:     schema.TypeString,
@@ -189,6 +196,18 @@ func resourceServerscomDedicatedServer() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"operational_status": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+			"reinstall_trigger": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Default:  reinstallTriggerNone,
+				Description: "Changing this to any value other than \"" + reinstallTriggerNone + "\" performs an OS reinstall, " +
+					"which DESTROYS ALL DATA on disk. A reinstall is required to apply changes to operating_system, " +
+					"layout or ssh_key_fingerprints; changing one of those without also changing reinstall_trigger fails the plan.",
+			},
 			"labels": {
 				Type:     schema.TypeMap,
 				Optional: true,
@@ -197,13 +216,58 @@ func resourceServerscomDedicatedServer() *schema.Resource {
 				},
 			},
 		},
+
+		CustomizeDiff: resourceServerscomDedicatedServerCustomizeDiff,
 	}
 }
 
-func resourceServerscomDedicatedServerRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*scgo.Client)
+// dedicatedServerOperationalStatusNormal is the operational_status a dedicated
+// server reports when it is not undergoing any operation (e.g. a reinstall).
+const dedicatedServerOperationalStatusNormal = "normal"
 
-	ctx := context.TODO()
+// reinstallTriggerNone is the sentinel value of reinstall_trigger that means
+// "no reinstall". A reinstall is performed only when reinstall_trigger changes
+// to some other value.
+const reinstallTriggerNone = "none"
+
+// dedicatedServerWillReinstall reports whether the planned change to
+// reinstall_trigger should perform an OS reinstall. A reinstall happens only
+// when the value actually changes to something other than the "none" sentinel,
+// so first-time adoption (the field appearing with its default) is a no-op.
+func dedicatedServerWillReinstall(oldTrigger, newTrigger string) bool {
+	return oldTrigger != newTrigger && newTrigger != reinstallTriggerNone
+}
+
+func resourceServerscomDedicatedServerCustomizeDiff(_ context.Context, d *schema.ResourceDiff, _ any) error {
+	// On create there is no reinstall: the OS is installed by the create flow.
+	if d.Id() == "" {
+		return nil
+	}
+
+	var changedTriggers []string
+	for _, field := range dedicatedServerReinstallFields {
+		if d.HasChange(field) {
+			changedTriggers = append(changedTriggers, field)
+		}
+	}
+
+	oldTrigger, newTrigger := d.GetChange("reinstall_trigger")
+	willReinstall := dedicatedServerWillReinstall(oldTrigger.(string), newTrigger.(string))
+
+	if len(changedTriggers) > 0 && !willReinstall {
+		return fmt.Errorf(
+			"changing %v requires an OS reinstall, which DESTROYS ALL DATA on disk; "+
+				"set reinstall_trigger to a new value (other than %q) to acknowledge and perform the reinstall, "+
+				"or revert these fields",
+			changedTriggers, reinstallTriggerNone,
+		)
+	}
+
+	return nil
+}
+
+func resourceServerscomDedicatedServerRead(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
+	client := meta.(*scgo.Client)
 
 	dedicatedServer, err := client.Hosts.GetDedicatedServer(ctx, d.Id())
 	if err != nil {
@@ -213,7 +277,7 @@ func resourceServerscomDedicatedServerRead(d *schema.ResourceData, meta interfac
 			d.SetId("")
 			return nil
 		default:
-			return fmt.Errorf("Error retrieving dedicated server: %s", err)
+			return diag.Errorf("error retrieving dedicated server: %s", err)
 		}
 	}
 
@@ -228,6 +292,7 @@ func resourceServerscomDedicatedServerRead(d *schema.ResourceData, meta interfac
 	d.Set("private_ipv4_address", dedicatedServer.PrivateIPv4Address)
 	d.Set("public_ipv4_address", dedicatedServer.PublicIPv4Address)
 	d.Set("status", dedicatedServer.Status)
+	d.Set("operational_status", dedicatedServer.OperationalStatus)
 	d.Set("server_model", dedicatedServer.ConfigurationDetails.ServerModelName)
 	d.Set("public_uplink", dedicatedServer.ConfigurationDetails.PublicUplinkName)
 	d.Set("private_uplink", dedicatedServer.ConfigurationDetails.PrivateUplinkName)
@@ -243,7 +308,7 @@ func resourceServerscomDedicatedServerRead(d *schema.ResourceData, meta interfac
 
 	slots, err := client.Hosts.DedicatedServerDriveSlots(d.Id()).Collect(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	driveSlots := getDriveSlots(slots)
@@ -267,14 +332,49 @@ func resourceServerscomDedicatedServerRead(d *schema.ResourceData, meta interfac
 	return nil
 }
 
-func resourceServerscomDedicatedServerUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomDedicatedServerUpdate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
+	client := meta.(*scgo.Client)
+
+	// A reinstall or update request is rejected while the server is still busy
+	// with a previous operation, so wait until it settles to "normal" first.
+	if err := waitForDedicatedServerOperationalNormal(ctx, d, meta); err != nil {
+		return diag.Errorf("error waiting for dedicated server (%s) to become ready for update: %s", d.Id(), err)
+	}
+
+	oldTrigger, newTrigger := d.GetChange("reinstall_trigger")
+	willReinstall := dedicatedServerWillReinstall(oldTrigger.(string), newTrigger.(string))
+
+	if willReinstall {
+		reinstallInput, err := buildDedicatedServerReinstallInput(ctx, d)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		reinstalledServer, err := client.Hosts.ReinstallOperatingSystemForDedicatedServer(ctx, d.Id(), *reinstallInput)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		// Rely on the reinstall response: it returns the server already in its
+		// in-progress operational status (e.g. "installation"). Anchor the wait
+		// on that status, then wait for it to return to "normal".
+		pending := []string{}
+		if s := reinstalledServer.OperationalStatus; s != "" && s != dedicatedServerOperationalStatusNormal {
+			pending = append(pending, s)
+		}
+
+		if _, err := waitForDedicatedServerAttribute(ctx, d, dedicatedServerOperationalStatusNormal, pending, "operational_status", meta, schema.TimeoutUpdate); err != nil {
+			return diag.Errorf("error waiting for dedicated server (%s) reinstall to complete: %s", d.Id(), err)
+		}
+	}
+
 	input := scgo.DedicatedServerUpdateInput{}
 
 	hasChanges := false
 	if d.HasChange("labels") {
 		hasChanges = true
 		if labelsRaw, ok := d.GetOk("labels"); ok {
-			labels := labelsRaw.(map[string]interface{})
+			labels := labelsRaw.(map[string]any)
 			stringLabels := make(map[string]string)
 			for k, v := range labels {
 				stringLabels[k] = v.(string)
@@ -290,23 +390,89 @@ func resourceServerscomDedicatedServerUpdate(d *schema.ResourceData, meta interf
 		}
 	}
 
-	if hasChanges {
-		client := meta.(*scgo.Client)
-		ctx := context.TODO()
-
-		if _, err := client.Hosts.UpdateDedicatedServer(ctx, d.Id(), input); err != nil {
-			return err
-		}
-
-		return resourceServerscomDedicatedServerRead(d, meta)
+	// user_data is applied in-place via PATCH; unlike SSH keys it cannot be part
+	// of the reinstall payload (the dedicated reinstall API has no user_data field).
+	if d.HasChange("user_data") {
+		hasChanges = true
+		userData := d.Get("user_data").(string)
+		input.UserData = &userData
 	}
 
-	return nil
+	if hasChanges {
+		if _, err := client.Hosts.UpdateDedicatedServer(ctx, d.Id(), input); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	return resourceServerscomDedicatedServerRead(ctx, d, meta)
 }
 
-func resourceServerscomDedicatedServerDelete(d *schema.ResourceData, meta interface{}) error {
+// buildDedicatedServerReinstallInput assembles the reinstall payload from the
+// current (post-change) resource configuration. Only the fields the reinstall
+// API accepts are included: hostname, operating system, drive layout and SSH
+// keys. SSH keys and user_data are not managed independently for now — keys are
+// simply passed into the reinstall as-is, and user_data stays ForceNew.
+func buildDedicatedServerReinstallInput(ctx context.Context, d *schema.ResourceData) (*scgo.OperatingSystemReinstallInput, error) {
+	location, err := getLocation(ctx, d.Get("location").(string))
+	if err != nil {
+		return nil, err
+	}
+
+	serverModel, err := getServerModel(ctx, location.ID, d.Get("server_model").(string))
+	if err != nil {
+		return nil, err
+	}
+
+	input := &scgo.OperatingSystemReinstallInput{
+		Hostname: d.Get("hostname").(string),
+	}
+
+	if operatingSystemName, ok := d.GetOk("operating_system"); ok {
+		operatingSystem, err := getOperatingSystem(ctx, location.ID, serverModel.ID, operatingSystemName.(string))
+		if err != nil {
+			return nil, err
+		}
+		input.OperatingSystemID = &operatingSystem.ID
+	}
+
+	layouts := getLayouts(d)
+	reinstallLayouts := make([]scgo.OperatingSystemReinstallLayoutInput, 0, len(layouts))
+	for _, layout := range layouts {
+		reinstallLayout := scgo.OperatingSystemReinstallLayoutInput{
+			SlotPositions: layout.SlotPositions,
+			Raid:          layout.Raid,
+		}
+
+		for _, partition := range layout.Partitions {
+			reinstallLayout.Partitions = append(
+				reinstallLayout.Partitions,
+				scgo.OperatingSystemReinstallPartitionInput{
+					Target: partition.Target,
+					Size:   partition.Size,
+					Fs:     partition.Fs,
+					Fill:   partition.Fill,
+				},
+			)
+		}
+
+		reinstallLayouts = append(reinstallLayouts, reinstallLayout)
+	}
+	input.Drives = scgo.OperatingSystemReinstallDrivesInput{Layout: reinstallLayouts}
+
+	if val, ok := d.GetOk("ssh_key_fingerprints"); ok {
+		input.SSHKeyFingerprints = expandedStringList(val.([]any))
+	}
+
+	if userData, ok := d.GetOk("user_data"); ok {
+		userDataValue := userData.(string)
+		input.UserData = &userDataValue
+	}
+
+	return input, nil
+}
+
+func resourceServerscomDedicatedServerDelete(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*scgo.Client)
-	ctx := context.TODO()
 
 	dedicatedServer, err := client.Hosts.GetDedicatedServer(ctx, d.Id())
 	if err != nil {
@@ -316,7 +482,7 @@ func resourceServerscomDedicatedServerDelete(d *schema.ResourceData, meta interf
 			d.SetId("")
 			return nil
 		default:
-			return fmt.Errorf("Error retrieving dedicated server: %s", err.Error())
+			return diag.Errorf("error retrieving dedicated server: %s", err.Error())
 		}
 	}
 
@@ -329,18 +495,18 @@ func resourceServerscomDedicatedServerDelete(d *schema.ResourceData, meta interf
 	if dedicatedServer.Status == "pending" || dedicatedServer.Status == "init" {
 		_, err = waitForDedicatedServerAttribute(ctx, d, "active", []string{"init", "pending"}, "status", meta, schema.TimeoutDelete)
 		if err != nil {
-			return fmt.Errorf("Error waiting for dedicated server (%s) to become ready: %s", d.Id(), err)
+			return diag.Errorf("error waiting for dedicated server (%s) to become ready: %s", d.Id(), err)
 		}
 	}
 
 	if _, err := client.Hosts.ScheduleReleaseForDedicatedServer(ctx, d.Id(), scgo.ScheduleReleaseInput{}); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
 }
 
-func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomDedicatedServerCreate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	var (
 		location        *scgo.Location
 		serverModel     *scgo.ServerModelOption
@@ -378,7 +544,7 @@ func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta interf
 		},
 	}
 	if labelsRaw, ok := d.GetOk("labels"); ok {
-		labels := labelsRaw.(map[string]interface{})
+		labels := labelsRaw.(map[string]any)
 		stringLabels := make(map[string]string)
 		for k, v := range labels {
 			stringLabels[k] = v.(string)
@@ -386,16 +552,16 @@ func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta interf
 		input.Hosts[0].Labels = stringLabels
 	}
 
-	location, err = getLocation(d.Get("location").(string))
+	location, err = getLocation(ctx, d.Get("location").(string))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	input.LocationID = location.ID
 
-	serverModel, err = getServerModel(location.ID, d.Get("server_model").(string))
+	serverModel, err = getServerModel(ctx, location.ID, d.Get("server_model").(string))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	input.ServerModelID = serverModel.ID
@@ -407,9 +573,9 @@ func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta interf
 	}
 
 	if operatingSystemName, ok := d.GetOk("operating_system"); ok {
-		operatingSystem, err = getOperatingSystem(location.ID, serverModel.ID, operatingSystemName.(string))
+		operatingSystem, err = getOperatingSystem(ctx, location.ID, serverModel.ID, operatingSystemName.(string))
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 
 		input.OperatingSystemID = &operatingSystem.ID
@@ -418,9 +584,9 @@ func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta interf
 	input.UplinkModels = scgo.DedicatedServerUplinkModelsInput{}
 
 	if publicUplinkName, ok := d.GetOk("public_uplink"); ok {
-		publicUplink, err = getUplink(location.ID, serverModel.ID, publicUplinkName.(string))
+		publicUplink, err = getUplink(ctx, location.ID, serverModel.ID, publicUplinkName.(string))
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 
 		input.UplinkModels.Public = &scgo.DedicatedServerPublicUplinkInput{}
@@ -428,32 +594,32 @@ func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta interf
 	}
 
 	if bandwidthName, ok := d.GetOk("bandwidth"); ok && publicUplink != nil {
-		bandwidth, err = getBandwidth(location.ID, serverModel.ID, publicUplink.ID, bandwidthName.(string))
+		bandwidth, err = getBandwidth(ctx, location.ID, serverModel.ID, publicUplink.ID, bandwidthName.(string))
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 
 		input.UplinkModels.Public.BandwidthModelID = bandwidth.ID
 	} else if !ok && publicUplink != nil {
-		return fmt.Errorf("bandwidth must be specified, when public uplink is present")
+		return diag.Errorf("bandwidth must be specified, when public uplink is present")
 	}
 
-	privateUplink, err = getUplink(location.ID, serverModel.ID, d.Get("private_uplink").(string))
+	privateUplink, err = getUplink(ctx, location.ID, serverModel.ID, d.Get("private_uplink").(string))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	input.UplinkModels.Private.ID = privateUplink.ID
 
-	slots, err = getSlots(d, location.ID, serverModel.ID)
+	slots, err = getSlots(ctx, d, location.ID, serverModel.ID)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	// TODO: Populate slots from model when len(slots) is zero
 	err = verifySlots(slots)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	input.Drives.Slots = slots
@@ -463,7 +629,7 @@ func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta interf
 	input.Drives.Layout = layouts
 
 	if val, ok := d.GetOk("ssh_key_fingerprints"); ok {
-		input.SSHKeyFingerprints = expandedStringList(val.([]interface{}))
+		input.SSHKeyFingerprints = expandedStringList(val.([]any))
 	}
 
 	if ipv6, ok := d.GetOk("ipv6"); ok {
@@ -475,44 +641,42 @@ func resourceServerscomDedicatedServerCreate(d *schema.ResourceData, meta interf
 		input.UserData = &userDataValue
 	}
 
-	ctx := context.TODO()
-
 	resultChan, err := serverCollector.AddRequest(ctx, "dedicated", input)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	// waiting for result from collector
 	result := <-resultChan
 	if result.Error != nil {
-		return result.Error
+		return diag.FromErr(result.Error)
 	}
 
 	if result.Servers.Count() == 0 {
-		return fmt.Errorf("Invalid dedicated servers count returned by api")
+		return diag.Errorf("invalid dedicated servers count returned by api")
 	}
 
 	// find corresponding server by title matching hostname
 	id := result.Servers.GetIdByHostname(hostname)
 	if id == "" {
-		return fmt.Errorf("Can't find the server with title '%s' in api response", hostname)
+		return diag.Errorf("can't find the server with title '%s' in api response", hostname)
 	}
 
 	d.SetId(id)
 
 	_, err = waitForDedicatedServerAttribute(ctx, d, "active", []string{"init", "pending"}, "status", meta, schema.TimeoutCreate)
 	if err != nil {
-		return fmt.Errorf("Error waiting for dedicated server (%s) to become ready: %s", d.Id(), err)
+		return diag.Errorf("error waiting for dedicated server (%s) to become ready: %s", d.Id(), err)
 	}
 
 	return nil
 }
 
-func getDriveSlots(slots []scgo.HostDriveSlot) []map[string]interface{} {
-	driveSlots := make([]map[string]interface{}, 0)
+func getDriveSlots(slots []scgo.HostDriveSlot) []map[string]any {
+	driveSlots := make([]map[string]any, 0)
 
 	for _, slot := range slots {
-		var currentSlot = make(map[string]interface{})
+		var currentSlot = make(map[string]any)
 
 		currentSlot["position"] = slot.Position
 
@@ -528,8 +692,8 @@ func getDriveSlots(slots []scgo.HostDriveSlot) []map[string]interface{} {
 	return driveSlots
 }
 
-func getLocation(code string) (*scgo.Location, error) {
-	locations, err := cache.Locations()
+func getLocation(ctx context.Context, code string) (*scgo.Location, error) {
+	locations, err := cache.Locations(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -540,11 +704,11 @@ func getLocation(code string) (*scgo.Location, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("Can't find location by: %s", code)
+	return nil, fmt.Errorf("can't find location by: %s", code)
 }
 
-func getServerModel(locationID int64, name string) (*scgo.ServerModelOption, error) {
-	serverModels, err := cache.ServerModels(locationID)
+func getServerModel(ctx context.Context, locationID int64, name string) (*scgo.ServerModelOption, error) {
+	serverModels, err := cache.ServerModels(ctx, locationID)
 	if err != nil {
 		return nil, err
 	}
@@ -555,11 +719,11 @@ func getServerModel(locationID int64, name string) (*scgo.ServerModelOption, err
 		}
 	}
 
-	return nil, fmt.Errorf("Can't find server model by: %s", name)
+	return nil, fmt.Errorf("can't find server model by: %s", name)
 }
 
-func getDriveModel(locationID int64, serverModelID int64, name string) (*scgo.DriveModel, error) {
-	driveModels, err := cache.DriveModels(locationID, serverModelID)
+func getDriveModel(ctx context.Context, locationID int64, serverModelID int64, name string) (*scgo.DriveModel, error) {
+	driveModels, err := cache.DriveModels(ctx, locationID, serverModelID)
 	if err != nil {
 		return nil, err
 	}
@@ -570,11 +734,11 @@ func getDriveModel(locationID int64, serverModelID int64, name string) (*scgo.Dr
 		}
 	}
 
-	return nil, fmt.Errorf("Can't find drive model by: %s", name)
+	return nil, fmt.Errorf("can't find drive model by: %s", name)
 }
 
-func getOperatingSystem(locationID int64, serverModelID int64, name string) (*scgo.OperatingSystemOption, error) {
-	operatingSystems, err := cache.OperatingSystems(locationID, serverModelID)
+func getOperatingSystem(ctx context.Context, locationID int64, serverModelID int64, name string) (*scgo.OperatingSystemOption, error) {
+	operatingSystems, err := cache.OperatingSystems(ctx, locationID, serverModelID)
 	if err != nil {
 		return nil, err
 	}
@@ -587,11 +751,11 @@ func getOperatingSystem(locationID int64, serverModelID int64, name string) (*sc
 		}
 	}
 
-	return nil, fmt.Errorf("Can't find operating system by: %s", name)
+	return nil, fmt.Errorf("can't find operating system by: %s", name)
 }
 
-func getUplink(locationID int64, serverModelID int64, name string) (*scgo.UplinkOption, error) {
-	uplinks, err := cache.Uplinks(locationID, serverModelID)
+func getUplink(ctx context.Context, locationID int64, serverModelID int64, name string) (*scgo.UplinkOption, error) {
+	uplinks, err := cache.Uplinks(ctx, locationID, serverModelID)
 	if err != nil {
 		return nil, err
 	}
@@ -602,11 +766,11 @@ func getUplink(locationID int64, serverModelID int64, name string) (*scgo.Uplink
 		}
 	}
 
-	return nil, fmt.Errorf("Can't find uplink by: %s", name)
+	return nil, fmt.Errorf("can't find uplink by: %s", name)
 }
 
-func getBandwidth(locationID int64, serverModelID int64, uplinkModelID int64, name string) (*scgo.BandwidthOption, error) {
-	bandwidthList, err := cache.Bandwidth(locationID, serverModelID, uplinkModelID)
+func getBandwidth(ctx context.Context, locationID int64, serverModelID int64, uplinkModelID int64, name string) (*scgo.BandwidthOption, error) {
+	bandwidthList, err := cache.Bandwidth(ctx, locationID, serverModelID, uplinkModelID)
 	if err != nil {
 		return nil, err
 	}
@@ -617,20 +781,20 @@ func getBandwidth(locationID int64, serverModelID int64, uplinkModelID int64, na
 		}
 	}
 
-	return nil, fmt.Errorf("Can't find bandwidth by: %s", name)
+	return nil, fmt.Errorf("can't find bandwidth by: %s", name)
 }
 
-func getSlots(d *schema.ResourceData, locationID int64, serverModelID int64) ([]scgo.DedicatedServerSlotInput, error) {
+func getSlots(ctx context.Context, d *schema.ResourceData, locationID int64, serverModelID int64) ([]scgo.DedicatedServerSlotInput, error) {
 	var slotsInput []scgo.DedicatedServerSlotInput
 
 	if slotsList, ok := d.GetOk("slot"); ok {
-		for _, slotSchema := range slotsList.([]interface{}) {
-			slot := slotSchema.(map[string]interface{})
+		for _, slotSchema := range slotsList.([]any) {
+			slot := slotSchema.(map[string]any)
 
 			var driveModelID *int64
 
 			if value, ok := slot["drive_model"]; ok && len(value.(string)) != 0 {
-				driveModel, err := getDriveModel(locationID, serverModelID, value.(string))
+				driveModel, err := getDriveModel(ctx, locationID, serverModelID, value.(string))
 				if err != nil {
 					return nil, err
 				}
@@ -674,11 +838,11 @@ func getLayouts(d *schema.ResourceData) []scgo.DedicatedServerLayoutInput {
 	var layoutInput []scgo.DedicatedServerLayoutInput
 
 	if layoutsList, ok := d.GetOk("layout"); ok {
-		for _, layoutSchema := range layoutsList.([]interface{}) {
-			layout := layoutSchema.(map[string]interface{})
+		for _, layoutSchema := range layoutsList.([]any) {
+			layout := layoutSchema.(map[string]any)
 
 			currentLayout := scgo.DedicatedServerLayoutInput{}
-			currentLayout.SlotPositions = expandIntList(layout["slot_positions"].([]interface{}))
+			currentLayout.SlotPositions = expandIntList(layout["slot_positions"].([]any))
 
 			if len(currentLayout.SlotPositions) > 1 {
 				raidLevel := layout["raid"].(int)
@@ -687,10 +851,10 @@ func getLayouts(d *schema.ResourceData) []scgo.DedicatedServerLayoutInput {
 
 			currentLayout.Partitions = []scgo.DedicatedServerLayoutPartitionInput{}
 
-			partitionsList := layout["partition"].([]interface{})
+			partitionsList := layout["partition"].([]any)
 
 			for _, partitionSchema := range partitionsList {
-				partition := partitionSchema.(map[string]interface{})
+				partition := partitionSchema.(map[string]any)
 
 				currentPartition := scgo.DedicatedServerLayoutPartitionInput{}
 				currentPartition.Target = partition["target"].(string)
@@ -719,15 +883,28 @@ func getLayouts(d *schema.ResourceData) []scgo.DedicatedServerLayoutInput {
 	return layoutInput
 }
 
-func verifyLayouts(layouts []scgo.DedicatedServerLayoutInput) error {
-	if len(layouts) == 0 {
-		return fmt.Errorf("at least one layout must be specified")
+// waitForDedicatedServerOperationalNormal blocks until the server's
+// operational_status is "normal", i.e. no operation (such as a reinstall) is in
+// progress. It checks the current status first to avoid the poll delay when the
+// server is already idle. The API rejects reinstall/update requests while an
+// operation is still running, so callers must settle to "normal" beforehand.
+func waitForDedicatedServerOperationalNormal(ctx context.Context, d *schema.ResourceData, meta any) error {
+	client := meta.(*scgo.Client)
+
+	dedicatedServer, err := client.Hosts.GetDedicatedServer(ctx, d.Id())
+	if err != nil {
+		return err
 	}
 
-	return nil
+	if dedicatedServer.OperationalStatus == dedicatedServerOperationalStatusNormal {
+		return nil
+	}
+
+	_, err = waitForDedicatedServerAttribute(ctx, d, dedicatedServerOperationalStatusNormal, []string{}, "operational_status", meta, schema.TimeoutUpdate)
+	return err
 }
 
-func waitForDedicatedServerAttribute(ctx context.Context, d *schema.ResourceData, target string, pending []string, attribute string, meta interface{}, timeoutKey string) (interface{}, error) {
+func waitForDedicatedServerAttribute(ctx context.Context, d *schema.ResourceData, target string, pending []string, attribute string, meta any, timeoutKey string) (any, error) {
 	log.Printf(
 		"[INFO] Waiting for dedicated server (%s) to have %s of %s",
 		d.Id(), attribute, target,
@@ -736,7 +913,7 @@ func waitForDedicatedServerAttribute(ctx context.Context, d *schema.ResourceData
 	stateConf := &retry.StateChangeConf{
 		Pending:      pending,
 		Target:       []string{target},
-		Refresh:      newDedicatedServerStateRefreshFunc(d, attribute, meta),
+		Refresh:      newDedicatedServerStateRefreshFunc(ctx, d, attribute, meta),
 		Timeout:      d.Timeout(timeoutKey),
 		PollInterval: 1 * time.Minute,
 		Delay:        1 * time.Minute,
@@ -745,18 +922,18 @@ func waitForDedicatedServerAttribute(ctx context.Context, d *schema.ResourceData
 	return stateConf.WaitForStateContext(ctx)
 }
 
-func newDedicatedServerStateRefreshFunc(d *schema.ResourceData, attribute string, meta interface{}) retry.StateRefreshFunc {
-	return func() (interface{}, string, error) {
-		err := resourceServerscomDedicatedServerRead(d, meta)
-		if err != nil {
-			return nil, "", err
+func newDedicatedServerStateRefreshFunc(ctx context.Context, d *schema.ResourceData, attribute string, meta any) retry.StateRefreshFunc {
+	return func() (any, string, error) {
+		diags := resourceServerscomDedicatedServerRead(ctx, d, meta)
+		if diags.HasError() {
+			return nil, "", errors.New(diags[0].Summary)
 		}
 
 		// See if we can access our attribute
 		if attr, ok := d.GetOk(attribute); ok {
-			switch attr.(type) {
+			switch attr := attr.(type) {
 			case bool:
-				return d, strconv.FormatBool(attr.(bool)), nil
+				return d, strconv.FormatBool(attr), nil
 			default:
 				return d, attr.(string), nil
 			}
@@ -772,8 +949,8 @@ type DedicatedServerCreateInput struct {
 }
 
 // GetHosts returns hosts from server input
-func (d *DedicatedServerCreateInput) GetHosts() []interface{} {
-	hosts := make([]interface{}, len(d.Hosts))
+func (d *DedicatedServerCreateInput) GetHosts() []any {
+	hosts := make([]any, len(d.Hosts))
 	for i, h := range d.Hosts {
 		hosts[i] = h
 	}
@@ -781,7 +958,7 @@ func (d *DedicatedServerCreateInput) GetHosts() []interface{} {
 }
 
 // SetHosts sets hosts for server create input
-func (d *DedicatedServerCreateInput) SetHosts(hosts []interface{}) {
+func (d *DedicatedServerCreateInput) SetHosts(hosts []any) {
 	if hosts == nil {
 		d.Hosts = nil
 		return

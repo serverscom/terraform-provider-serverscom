@@ -69,7 +69,7 @@ func dataSourceServerscomSbmOperatingSystemOrderOptionsRead(d *schema.ResourceDa
 
 	options, err := collection.Collect(ctx)
 	if err != nil {
-		return fmt.Errorf("Error retrieving SBM operating system order options: %s", err.Error())
+		return fmt.Errorf("error retrieving SBM operating system order options: %s", err.Error())
 	}
 
 	optionList := make([]map[string]any, 0, len(options))
@@ -88,7 +88,7 @@ func dataSourceServerscomSbmOperatingSystemOrderOptionsRead(d *schema.ResourceDa
 	d.SetId(id)
 
 	if err := d.Set("sbm_operating_systems", optionList); err != nil {
-		return fmt.Errorf("Error setting SBM operating system order options: %s", err.Error())
+		return fmt.Errorf("error setting SBM operating system order options: %s", err.Error())
 	}
 
 	return nil

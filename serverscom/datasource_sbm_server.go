@@ -143,7 +143,7 @@ func dataSourceServerscomSBMServerRead(d *schema.ResourceData, meta any) error {
 
 	server, err := client.Hosts.GetSBMServer(ctx, serverID)
 	if err != nil {
-		return fmt.Errorf("Error retrieving sbm server: %s", err.Error())
+		return fmt.Errorf("error retrieving sbm server: %s", err.Error())
 	}
 
 	d.SetId(server.ID)

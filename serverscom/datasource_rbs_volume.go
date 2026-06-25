@@ -44,7 +44,7 @@ func dataSourceServerscomRBSVolumeRead(ctx context.Context, d *schema.ResourceDa
 
 	vol, err := client.RemoteBlockStorageVolumes.Get(ctx, id)
 	if err != nil {
-		return diag.FromErr(fmt.Errorf("Error retrieving RBS volume: %s", err))
+		return diag.FromErr(fmt.Errorf("error retrieving RBS volume: %s", err))
 	}
 
 	d.SetId(vol.ID)

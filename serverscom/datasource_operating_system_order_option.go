@@ -61,7 +61,7 @@ func dataSourceServerscomOperatingSystemOrderOptionRead(d *schema.ResourceData, 
 
 	os, err := client.Locations.GetOperatingSystemOption(ctx, int64(locationID), int64(serverModelID), int64(operatingSystemID))
 	if err != nil {
-		return fmt.Errorf("Error retrieving operating system order option: %s", err.Error())
+		return fmt.Errorf("error retrieving operating system order option: %s", err.Error())
 	}
 
 	d.SetId(strconv.Itoa(int(os.ID)))

@@ -2,11 +2,13 @@ package serverscom
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -21,10 +23,10 @@ var (
 
 func resourceServerscomL2Segment() *schema.Resource {
 	return &schema.Resource{
-		Read:   resourceServerscomL2SegmentRead,
-		Update: resourceServerscomL2SegmentUpdate,
-		Delete: resourceServerscomL2SegmentDelete,
-		Create: resourceServerscomL2SegmentCreate,
+		ReadContext:   resourceServerscomL2SegmentRead,
+		UpdateContext: resourceServerscomL2SegmentUpdate,
+		DeleteContext: resourceServerscomL2SegmentDelete,
+		CreateContext: resourceServerscomL2SegmentCreate,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -111,10 +113,8 @@ func resourceServerscomL2Segment() *schema.Resource {
 	}
 }
 
-func resourceServerscomL2SegmentRead(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomL2SegmentRead(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*scgo.Client)
-
-	ctx := context.TODO()
 
 	l2Segment, err := client.L2Segments.Get(ctx, d.Id())
 	if err != nil {
@@ -124,7 +124,7 @@ func resourceServerscomL2SegmentRead(d *schema.ResourceData, meta interface{}) e
 			d.SetId("")
 			return nil
 		default:
-			return fmt.Errorf("Error retrieving l2 segment: %s", err)
+			return diag.Errorf("error retrieving l2 segment: %s", err)
 		}
 	}
 
@@ -148,7 +148,7 @@ func resourceServerscomL2SegmentRead(d *schema.ResourceData, meta interface{}) e
 
 	members, err := client.L2Segments.Members(d.Id()).Collect(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	l2Members := getMembers(members)
@@ -158,7 +158,7 @@ func resourceServerscomL2SegmentRead(d *schema.ResourceData, meta interface{}) e
 	return nil
 }
 
-func resourceServerscomL2SegmentUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomL2SegmentUpdate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	input := scgo.L2SegmentUpdateInput{}
 
 	if d.HasChange("name") {
@@ -172,7 +172,7 @@ func resourceServerscomL2SegmentUpdate(d *schema.ResourceData, meta interface{})
 
 	if d.HasChange("labels") {
 		if labelsRaw, ok := d.GetOk("labels"); ok {
-			labels := labelsRaw.(map[string]interface{})
+			labels := labelsRaw.(map[string]any)
 			stringLabels := make(map[string]string)
 			for k, v := range labels {
 				stringLabels[k] = v.(string)
@@ -184,30 +184,26 @@ func resourceServerscomL2SegmentUpdate(d *schema.ResourceData, meta interface{})
 	if d.HasChanges("name", "member") {
 		client := meta.(*scgo.Client)
 
-		ctx := context.TODO()
-
 		if _, err := waitForL2SegmentAttribute(ctx, d, "active", []string{"pending"}, "status", meta, schema.TimeoutUpdate); err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 
 		if _, err := client.L2Segments.Update(ctx, d.Id(), input); err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 
 		if _, err := waitForL2SegmentAttribute(ctx, d, "active", []string{"pending"}, "status", meta, schema.TimeoutUpdate); err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 
-		return resourceServerscomL2SegmentRead(d, meta)
+		return resourceServerscomL2SegmentRead(ctx, d, meta)
 	}
 
 	return nil
 }
 
-func resourceServerscomL2SegmentDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomL2SegmentDelete(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*scgo.Client)
-
-	ctx := context.TODO()
 
 	l2Segment, err := client.L2Segments.Get(ctx, d.Id())
 	if err != nil {
@@ -217,7 +213,7 @@ func resourceServerscomL2SegmentDelete(d *schema.ResourceData, meta interface{})
 			d.SetId("")
 			return nil
 		default:
-			return fmt.Errorf("Error retrieving l2 segment: %s", err)
+			return diag.Errorf("error retrieving l2 segment: %s", err)
 		}
 	}
 
@@ -229,17 +225,19 @@ func resourceServerscomL2SegmentDelete(d *schema.ResourceData, meta interface{})
 
 	if l2Segment.Status == "pending" {
 		if _, err := waitForL2SegmentAttribute(ctx, d, "active", []string{"pending"}, "status", meta, schema.TimeoutDelete); err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
-	return client.L2Segments.Delete(ctx, d.Id())
+	if err := client.L2Segments.Delete(ctx, d.Id()); err != nil {
+		return diag.FromErr(err)
+	}
+
+	return nil
 }
 
-func resourceServerscomL2SegmentCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomL2SegmentCreate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*scgo.Client)
-
-	ctx := context.TODO()
 
 	name := d.Get("name").(string)
 
@@ -247,16 +245,16 @@ func resourceServerscomL2SegmentCreate(d *schema.ResourceData, meta interface{})
 	input.Name = &name
 	input.Type = d.Get("type").(string)
 
-	locationGroup, err := getLocationGroup(input.Type, d.Get("location_group").(string))
+	locationGroup, err := getLocationGroup(ctx, input.Type, d.Get("location_group").(string))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	input.LocationGroupID = locationGroup.ID
 	input.Members = getSchemaMembers(d)
 
 	if labelsRaw, ok := d.GetOk("labels"); ok {
-		labels := labelsRaw.(map[string]interface{})
+		labels := labelsRaw.(map[string]any)
 		stringLabels := make(map[string]string)
 		for k, v := range labels {
 			stringLabels[k] = v.(string)
@@ -266,23 +264,23 @@ func resourceServerscomL2SegmentCreate(d *schema.ResourceData, meta interface{})
 
 	l2Segment, err := client.L2Segments.Create(ctx, input)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.SetId(l2Segment.ID)
 
 	if _, err := waitForL2SegmentAttribute(ctx, d, "active", []string{"pending"}, "status", meta, schema.TimeoutCreate); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
 }
 
-func getMembers(members []scgo.L2Member) []map[string]interface{} {
-	l2Members := make([]map[string]interface{}, 0)
+func getMembers(members []scgo.L2Member) []map[string]any {
+	l2Members := make([]map[string]any, 0)
 
 	for _, member := range members {
-		var currentMember = make(map[string]interface{})
+		var currentMember = make(map[string]any)
 
 		currentMember["id"] = member.ID
 		currentMember["mode"] = member.Mode
@@ -297,7 +295,7 @@ func getMembers(members []scgo.L2Member) []map[string]interface{} {
 	return l2Members
 }
 
-func waitForL2SegmentAttribute(ctx context.Context, d *schema.ResourceData, target string, pending []string, attribute string, meta interface{}, timeoutKey string) (interface{}, error) {
+func waitForL2SegmentAttribute(ctx context.Context, d *schema.ResourceData, target string, pending []string, attribute string, meta any, timeoutKey string) (any, error) {
 	log.Printf(
 		"[INFO] Waiting for l2 segment (%s) to have %s of %s",
 		d.Id(), attribute, target,
@@ -306,7 +304,7 @@ func waitForL2SegmentAttribute(ctx context.Context, d *schema.ResourceData, targ
 	stateConf := &retry.StateChangeConf{
 		Pending:    pending,
 		Target:     []string{target},
-		Refresh:    newL2SegmentStateRefreshFunc(d, attribute, meta),
+		Refresh:    newL2SegmentStateRefreshFunc(ctx, d, attribute, meta),
 		Timeout:    d.Timeout(timeoutKey),
 		Delay:      1 * time.Minute,
 		MinTimeout: 15 * time.Second,
@@ -315,18 +313,18 @@ func waitForL2SegmentAttribute(ctx context.Context, d *schema.ResourceData, targ
 	return stateConf.WaitForStateContext(ctx)
 }
 
-func newL2SegmentStateRefreshFunc(d *schema.ResourceData, attribute string, meta interface{}) retry.StateRefreshFunc {
-	return func() (interface{}, string, error) {
-		err := resourceServerscomL2SegmentRead(d, meta)
-		if err != nil {
-			return nil, "", err
+func newL2SegmentStateRefreshFunc(ctx context.Context, d *schema.ResourceData, attribute string, meta any) retry.StateRefreshFunc {
+	return func() (any, string, error) {
+		diags := resourceServerscomL2SegmentRead(ctx, d, meta)
+		if diags.HasError() {
+			return nil, "", errors.New(diags[0].Summary)
 		}
 
 		// See if we can access our attribute
 		if attr, ok := d.GetOk(attribute); ok {
-			switch attr.(type) {
+			switch attr := attr.(type) {
 			case bool:
-				return d, strconv.FormatBool(attr.(bool)), nil
+				return d, strconv.FormatBool(attr), nil
 			default:
 				return d, attr.(string), nil
 			}
@@ -336,8 +334,8 @@ func newL2SegmentStateRefreshFunc(d *schema.ResourceData, attribute string, meta
 	}
 }
 
-func getLocationGroup(groupType string, groupCode string) (*scgo.L2LocationGroup, error) {
-	locationGroups, err := cache.LocationGroups()
+func getLocationGroup(ctx context.Context, groupType string, groupCode string) (*scgo.L2LocationGroup, error) {
+	locationGroups, err := cache.LocationGroups(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -348,14 +346,14 @@ func getLocationGroup(groupType string, groupCode string) (*scgo.L2LocationGroup
 		}
 	}
 
-	return nil, fmt.Errorf("Can't find location group by: %s (%s)", groupCode, groupType)
+	return nil, fmt.Errorf("can't find location group by: %s (%s)", groupCode, groupType)
 }
 
 func getSchemaMembers(d *schema.ResourceData) []scgo.L2SegmentMemberInput {
 	var members []scgo.L2SegmentMemberInput
 
 	for _, memberMap := range d.Get("member").(*schema.Set).List() {
-		member := memberMap.(map[string]interface{})
+		member := memberMap.(map[string]any)
 
 		currentMember := scgo.L2SegmentMemberInput{}
 		currentMember.ID = member["id"].(string)

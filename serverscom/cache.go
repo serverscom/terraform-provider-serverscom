@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"sync"
 
-	lru "github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru/v2"
 	scgo "github.com/serverscom/serverscom-go-client/pkg"
 )
 
 var cache *Cache
 
 func NewCache(cli *scgo.Client) *Cache {
-	newLru, err := lru.New(100)
+	newLru, err := lru.New[string, any](100)
 	if err != nil {
 		panic(err)
 	}
@@ -20,19 +20,17 @@ func NewCache(cli *scgo.Client) *Cache {
 	return &Cache{
 		client: cli,
 		lru:    newLru,
-		ctx:    context.TODO(),
 	}
 }
 
 type Cache struct {
 	client *scgo.Client
-	lru    *lru.Cache
-	ctx    context.Context
+	lru    *lru.Cache[string, any]
 
 	sync.Mutex
 }
 
-func (c *Cache) Locations() ([]scgo.Location, error) {
+func (c *Cache) Locations(ctx context.Context) ([]scgo.Location, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -41,7 +39,7 @@ func (c *Cache) Locations() ([]scgo.Location, error) {
 		return val.([]scgo.Location), nil
 	}
 
-	locations, err := c.client.Locations.Collection().Collect(c.ctx)
+	locations, err := c.client.Locations.Collection().Collect(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +49,7 @@ func (c *Cache) Locations() ([]scgo.Location, error) {
 	return locations, nil
 }
 
-func (c *Cache) ServerModels(locationID int64) ([]scgo.ServerModelOption, error) {
+func (c *Cache) ServerModels(ctx context.Context, locationID int64) ([]scgo.ServerModelOption, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -62,7 +60,7 @@ func (c *Cache) ServerModels(locationID int64) ([]scgo.ServerModelOption, error)
 		return val.([]scgo.ServerModelOption), nil
 	}
 
-	serverModels, err := c.client.Locations.ServerModelOptions(locationID).Collect(c.ctx)
+	serverModels, err := c.client.Locations.ServerModelOptions(locationID).Collect(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +70,7 @@ func (c *Cache) ServerModels(locationID int64) ([]scgo.ServerModelOption, error)
 	return serverModels, nil
 }
 
-func (c *Cache) DriveModels(locationID int64, serverModelID int64) ([]scgo.DriveModel, error) {
+func (c *Cache) DriveModels(ctx context.Context, locationID int64, serverModelID int64) ([]scgo.DriveModel, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -83,7 +81,7 @@ func (c *Cache) DriveModels(locationID int64, serverModelID int64) ([]scgo.Drive
 		return val.([]scgo.DriveModel), nil
 	}
 
-	driveModels, err := c.client.Locations.DriveModelOptions(locationID, serverModelID).Collect(c.ctx)
+	driveModels, err := c.client.Locations.DriveModelOptions(locationID, serverModelID).Collect(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +91,7 @@ func (c *Cache) DriveModels(locationID int64, serverModelID int64) ([]scgo.Drive
 	return driveModels, nil
 }
 
-func (c *Cache) OperatingSystems(locationID int64, serverModelID int64) ([]scgo.OperatingSystemOption, error) {
+func (c *Cache) OperatingSystems(ctx context.Context, locationID int64, serverModelID int64) ([]scgo.OperatingSystemOption, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -104,7 +102,7 @@ func (c *Cache) OperatingSystems(locationID int64, serverModelID int64) ([]scgo.
 		return val.([]scgo.OperatingSystemOption), nil
 	}
 
-	operatingSystems, err := c.client.Locations.OperatingSystemOptions(locationID, serverModelID).Collect(c.ctx)
+	operatingSystems, err := c.client.Locations.OperatingSystemOptions(locationID, serverModelID).Collect(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +112,7 @@ func (c *Cache) OperatingSystems(locationID int64, serverModelID int64) ([]scgo.
 	return operatingSystems, nil
 }
 
-func (c *Cache) Uplinks(locationID int64, serverModelID int64) ([]scgo.UplinkOption, error) {
+func (c *Cache) Uplinks(ctx context.Context, locationID int64, serverModelID int64) ([]scgo.UplinkOption, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -125,7 +123,7 @@ func (c *Cache) Uplinks(locationID int64, serverModelID int64) ([]scgo.UplinkOpt
 		return val.([]scgo.UplinkOption), nil
 	}
 
-	uplinks, err := c.client.Locations.UplinkOptions(locationID, serverModelID).Collect(c.ctx)
+	uplinks, err := c.client.Locations.UplinkOptions(locationID, serverModelID).Collect(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +133,7 @@ func (c *Cache) Uplinks(locationID int64, serverModelID int64) ([]scgo.UplinkOpt
 	return uplinks, nil
 }
 
-func (c *Cache) Bandwidth(locationID int64, serverModelID int64, uplinkModelID int64) ([]scgo.BandwidthOption, error) {
+func (c *Cache) Bandwidth(ctx context.Context, locationID int64, serverModelID int64, uplinkModelID int64) ([]scgo.BandwidthOption, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -146,7 +144,7 @@ func (c *Cache) Bandwidth(locationID int64, serverModelID int64, uplinkModelID i
 		return val.([]scgo.BandwidthOption), nil
 	}
 
-	bandwidthList, err := c.client.Locations.BandwidthOptions(locationID, serverModelID, uplinkModelID).Collect(c.ctx)
+	bandwidthList, err := c.client.Locations.BandwidthOptions(locationID, serverModelID, uplinkModelID).Collect(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +154,7 @@ func (c *Cache) Bandwidth(locationID int64, serverModelID int64, uplinkModelID i
 	return bandwidthList, nil
 }
 
-func (c *Cache) LocationGroups() ([]scgo.L2LocationGroup, error) {
+func (c *Cache) LocationGroups(ctx context.Context) ([]scgo.L2LocationGroup, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -165,7 +163,7 @@ func (c *Cache) LocationGroups() ([]scgo.L2LocationGroup, error) {
 		return val.([]scgo.L2LocationGroup), nil
 	}
 
-	locationGroups, err := c.client.L2Segments.LocationGroups().Collect(c.ctx)
+	locationGroups, err := c.client.L2Segments.LocationGroups().Collect(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +173,7 @@ func (c *Cache) LocationGroups() ([]scgo.L2LocationGroup, error) {
 	return locationGroups, nil
 }
 
-func (c *Cache) CloudComputingRegions() ([]scgo.CloudComputingRegion, error) {
+func (c *Cache) CloudComputingRegions(ctx context.Context) ([]scgo.CloudComputingRegion, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -184,7 +182,7 @@ func (c *Cache) CloudComputingRegions() ([]scgo.CloudComputingRegion, error) {
 		return val.([]scgo.CloudComputingRegion), nil
 	}
 
-	cloudRegions, err := c.client.CloudComputingRegions.Collection().Collect(c.ctx)
+	cloudRegions, err := c.client.CloudComputingRegions.Collection().Collect(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +192,7 @@ func (c *Cache) CloudComputingRegions() ([]scgo.CloudComputingRegion, error) {
 	return cloudRegions, nil
 }
 
-func (c *Cache) CloudComputingImages(regionID int64) ([]scgo.CloudComputingImage, error) {
+func (c *Cache) CloudComputingImages(ctx context.Context, regionID int64) ([]scgo.CloudComputingImage, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -205,7 +203,7 @@ func (c *Cache) CloudComputingImages(regionID int64) ([]scgo.CloudComputingImage
 		return val.([]scgo.CloudComputingImage), nil
 	}
 
-	cloudImages, err := c.client.CloudComputingRegions.Images(regionID).Collect(c.ctx)
+	cloudImages, err := c.client.CloudComputingRegions.Images(regionID).Collect(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +213,7 @@ func (c *Cache) CloudComputingImages(regionID int64) ([]scgo.CloudComputingImage
 	return cloudImages, nil
 }
 
-func (c *Cache) CloudComputingFlavors(regionID int64) ([]scgo.CloudComputingFlavor, error) {
+func (c *Cache) CloudComputingFlavors(ctx context.Context, regionID int64) ([]scgo.CloudComputingFlavor, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -226,7 +224,7 @@ func (c *Cache) CloudComputingFlavors(regionID int64) ([]scgo.CloudComputingFlav
 		return val.([]scgo.CloudComputingFlavor), nil
 	}
 
-	cloudFlavors, err := c.client.CloudComputingRegions.Flavors(regionID).Collect(c.ctx)
+	cloudFlavors, err := c.client.CloudComputingRegions.Flavors(regionID).Collect(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -236,7 +234,7 @@ func (c *Cache) CloudComputingFlavors(regionID int64) ([]scgo.CloudComputingFlav
 	return cloudFlavors, nil
 }
 
-func (c *Cache) SBMOperatingSystems(locationID int64, sbmFlavorModelID int64) ([]scgo.OperatingSystemOption, error) {
+func (c *Cache) SBMOperatingSystems(ctx context.Context, locationID int64, sbmFlavorModelID int64) ([]scgo.OperatingSystemOption, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -247,7 +245,7 @@ func (c *Cache) SBMOperatingSystems(locationID int64, sbmFlavorModelID int64) ([
 		return val.([]scgo.OperatingSystemOption), nil
 	}
 
-	operatingSystems, err := c.client.Locations.SBMOperatingSystemOptions(locationID, sbmFlavorModelID).Collect(c.ctx)
+	operatingSystems, err := c.client.Locations.SBMOperatingSystemOptions(locationID, sbmFlavorModelID).Collect(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -257,7 +255,7 @@ func (c *Cache) SBMOperatingSystems(locationID int64, sbmFlavorModelID int64) ([
 	return operatingSystems, nil
 }
 
-func (c *Cache) SBMFlavors(regionID int64) ([]scgo.SBMFlavor, error) {
+func (c *Cache) SBMFlavors(ctx context.Context, regionID int64) ([]scgo.SBMFlavor, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -268,7 +266,7 @@ func (c *Cache) SBMFlavors(regionID int64) ([]scgo.SBMFlavor, error) {
 		return val.([]scgo.SBMFlavor), nil
 	}
 
-	sbmFlavors, err := c.client.Locations.SBMFlavorOptions(regionID).Collect(c.ctx)
+	sbmFlavors, err := c.client.Locations.SBMFlavorOptions(regionID).Collect(ctx)
 	if err != nil {
 		return nil, err
 	}

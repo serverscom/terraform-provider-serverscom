@@ -123,7 +123,7 @@ func dataSourceServerscomServerModelOrderOptionsRead(d *schema.ResourceData, met
 
 	options, err := collection.Collect(ctx)
 	if err != nil {
-		return fmt.Errorf("Error retrieving server model order options: %s", err.Error())
+		return fmt.Errorf("error retrieving server model order options: %s", err.Error())
 	}
 
 	optionList := make([]map[string]any, 0, len(options))
@@ -147,7 +147,7 @@ func dataSourceServerscomServerModelOrderOptionsRead(d *schema.ResourceData, met
 
 	d.SetId(id)
 	if err := d.Set("server_models", optionList); err != nil {
-		return fmt.Errorf("Error setting server model order options: %s", err.Error())
+		return fmt.Errorf("error setting server model order options: %s", err.Error())
 	}
 
 	return nil

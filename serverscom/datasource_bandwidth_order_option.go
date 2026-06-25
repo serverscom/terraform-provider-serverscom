@@ -57,7 +57,7 @@ func dataSourceServerscomBandwidthOrderOptionRead(d *schema.ResourceData, meta a
 
 	bw, err := client.Locations.GetBandwidthOption(ctx, int64(locationID), int64(serverModelID), int64(uplinkModelID), int64(bandwidthID))
 	if err != nil {
-		return fmt.Errorf("Error retrieving bandwidth order option: %s", err.Error())
+		return fmt.Errorf("error retrieving bandwidth order option: %s", err.Error())
 	}
 
 	d.SetId(strconv.Itoa(int(bw.ID)))

@@ -87,7 +87,7 @@ func dataSourceServerscomRBSVolumesRead(ctx context.Context, d *schema.ResourceD
 
 	vols, err := col.Collect(ctx)
 	if err != nil {
-		return diag.FromErr(fmt.Errorf("Error retrieving RBS volumes: %s", err))
+		return diag.FromErr(fmt.Errorf("error retrieving RBS volumes: %s", err))
 	}
 
 	list := make([]map[string]any, 0, len(vols))
@@ -120,7 +120,7 @@ func dataSourceServerscomRBSVolumesRead(ctx context.Context, d *schema.ResourceD
 
 	d.SetId(id)
 	if err := d.Set("rbs_volumes", list); err != nil {
-		return diag.FromErr(fmt.Errorf("Error setting rbs volumes: %s", err.Error()))
+		return diag.FromErr(fmt.Errorf("error setting rbs volumes: %s", err.Error()))
 	}
 
 	return nil

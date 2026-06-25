@@ -59,7 +59,7 @@ func dataSourceServerscomLocationRead(d *schema.ResourceData, meta any) error {
 
 	location, err := client.Locations.GetLocation(ctx, int64(locationID))
 	if err != nil {
-		return fmt.Errorf("Error retrieving location: %s", err.Error())
+		return fmt.Errorf("error retrieving location: %s", err.Error())
 	}
 
 	d.SetId(strconv.Itoa(int(location.ID)))

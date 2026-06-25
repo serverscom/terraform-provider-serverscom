@@ -42,7 +42,7 @@ func dataSourceServerscomRBSFlavorsRead(ctx context.Context, d *schema.ResourceD
 
 	flavors, err := collection.Collect(ctx)
 	if err != nil {
-		return diag.FromErr(fmt.Errorf("Error retrieving RBS flavor order options: %s", err.Error()))
+		return diag.FromErr(fmt.Errorf("error retrieving RBS flavor order options: %s", err.Error()))
 	}
 
 	list := make([]map[string]any, 0, len(flavors))
@@ -60,7 +60,7 @@ func dataSourceServerscomRBSFlavorsRead(ctx context.Context, d *schema.ResourceD
 	d.SetId(id)
 
 	if err := d.Set("rbs_flavors", list); err != nil {
-		return diag.FromErr(fmt.Errorf("Error setting RBS flavor order options: %s", err.Error()))
+		return diag.FromErr(fmt.Errorf("error setting RBS flavor order options: %s", err.Error()))
 	}
 
 	return nil

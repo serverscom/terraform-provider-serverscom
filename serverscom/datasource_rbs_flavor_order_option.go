@@ -32,7 +32,7 @@ func dataSourceServerscomRBSFlavorRead(ctx context.Context, d *schema.ResourceDa
 
 	flavor, err := client.Locations.GetRemoteBlockStorageFlavor(ctx, locationID, flavorID)
 	if err != nil {
-		return diag.FromErr(fmt.Errorf("Error retrieving RBS flavor order option: %s", err.Error()))
+		return diag.FromErr(fmt.Errorf("error retrieving RBS flavor order option: %s", err.Error()))
 	}
 
 	d.SetId(strconv.Itoa(int(flavor.ID)))

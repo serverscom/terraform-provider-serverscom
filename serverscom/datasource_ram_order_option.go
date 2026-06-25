@@ -48,7 +48,7 @@ func dataSourceServerscomRamOrderOptionRead(d *schema.ResourceData, meta any) er
 
 	options, err := client.Locations.RAMOptions(int64(locationID), int64(serverModelID)).Collect(ctx)
 	if err != nil {
-		return fmt.Errorf("Error retrieving RAM order options: %s", err.Error())
+		return fmt.Errorf("error retrieving RAM order options: %s", err.Error())
 	}
 
 	for _, ram := range options {
@@ -61,5 +61,5 @@ func dataSourceServerscomRamOrderOptionRead(d *schema.ResourceData, meta any) er
 		}
 	}
 
-	return fmt.Errorf("No RAM option found matching ram=%d and type=%s", targetRAM, targetType)
+	return fmt.Errorf("no RAM option found matching ram=%d and type=%s", targetRAM, targetType)
 }

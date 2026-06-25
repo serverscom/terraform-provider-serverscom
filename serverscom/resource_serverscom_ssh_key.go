@@ -2,10 +2,10 @@ package serverscom
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	scgo "github.com/serverscom/serverscom-go-client/pkg"
@@ -13,10 +13,10 @@ import (
 
 func resourceServerscomSSHKey() *schema.Resource {
 	return &schema.Resource{
-		Read:   resourceServerscomSSHKeyRead,
-		Update: resourceServerscomSSHKeyUpdate,
-		Delete: resourceServerscomSSHKeyDelete,
-		Create: resourceServerscomSSHKeyCreate,
+		ReadContext:   resourceServerscomSSHKeyRead,
+		UpdateContext: resourceServerscomSSHKeyUpdate,
+		DeleteContext: resourceServerscomSSHKeyDelete,
+		CreateContext: resourceServerscomSSHKeyCreate,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -51,13 +51,19 @@ func resourceServerscomSSHKey() *schema.Resource {
 	}
 }
 
-func resourceServerscomSSHKeyRead(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomSSHKeyRead(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*scgo.Client)
-	ctx := context.TODO()
 
 	sshKey, err := client.SSHKeys.Get(ctx, d.Id())
 	if err != nil {
-		return err
+		switch err.(type) {
+		case *scgo.NotFoundError:
+			log.Printf("[WARN] Serverscom ssh key (%s) not found", d.Id())
+			d.SetId("")
+			return nil
+		default:
+			return diag.Errorf("error retrieving ssh key: %s", err)
+		}
 	}
 
 	d.Set("name", sshKey.Name)
@@ -67,13 +73,8 @@ func resourceServerscomSSHKeyRead(d *schema.ResourceData, meta interface{}) erro
 	return nil
 }
 
-func resourceServerscomSSHKeyUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomSSHKeyUpdate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*scgo.Client)
-	ctx := context.TODO()
-
-	if _, err := client.SSHKeys.Get(ctx, d.Id()); err != nil {
-		return err
-	}
 
 	var newName string
 	if v, ok := d.GetOk("name"); ok {
@@ -85,7 +86,7 @@ func resourceServerscomSSHKeyUpdate(d *schema.ResourceData, meta interface{}) er
 
 	if d.HasChange("labels") {
 		if labelsRaw, ok := d.GetOk("labels"); ok {
-			labels := labelsRaw.(map[string]interface{})
+			labels := labelsRaw.(map[string]any)
 			stringLabels := make(map[string]string)
 			for k, v := range labels {
 				stringLabels[k] = v.(string)
@@ -95,15 +96,14 @@ func resourceServerscomSSHKeyUpdate(d *schema.ResourceData, meta interface{}) er
 	}
 
 	if _, err := client.SSHKeys.Update(ctx, d.Id(), input); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	return resourceServerscomSSHKeyRead(d, meta)
+	return resourceServerscomSSHKeyRead(ctx, d, meta)
 }
 
-func resourceServerscomSSHKeyDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomSSHKeyDelete(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*scgo.Client)
-	ctx := context.TODO()
 
 	err := client.SSHKeys.Delete(ctx, d.Id())
 	if err != nil {
@@ -113,23 +113,22 @@ func resourceServerscomSSHKeyDelete(d *schema.ResourceData, meta interface{}) er
 			d.SetId("")
 			return nil
 		default:
-			return fmt.Errorf("Error retrieving ssh key: %s", err.Error())
+			return diag.Errorf("error retrieving ssh key: %s", err.Error())
 		}
 	}
 
 	return nil
 }
 
-func resourceServerscomSSHKeyCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceServerscomSSHKeyCreate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*scgo.Client)
-	ctx := context.TODO()
 
 	input := scgo.SSHKeyCreateInput{}
 	input.PublicKey = d.Get("public_key").(string)
 	input.Name = d.Get("name").(string)
 
 	if labelsRaw, ok := d.GetOk("labels"); ok {
-		labels := labelsRaw.(map[string]interface{})
+		labels := labelsRaw.(map[string]any)
 		stringLabels := make(map[string]string)
 		for k, v := range labels {
 			stringLabels[k] = v.(string)
@@ -139,12 +138,12 @@ func resourceServerscomSSHKeyCreate(d *schema.ResourceData, meta interface{}) er
 
 	sshKey, err := client.SSHKeys.Create(ctx, input)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.SetId(sshKey.Fingerprint)
 
-	return resourceServerscomSSHKeyRead(d, meta)
+	return resourceServerscomSSHKeyRead(ctx, d, meta)
 }
 
 func resourceServerscomSSHKeyPublicKeyDiffSuppress(k, old, new string, d *schema.ResourceData) bool {

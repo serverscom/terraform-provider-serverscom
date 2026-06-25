@@ -50,7 +50,7 @@ func dataSourceServerscomRamOrderOptionsRead(d *schema.ResourceData, meta any) e
 
 	options, err := client.Locations.RAMOptions(int64(locationID), int64(serverModelID)).Collect(ctx)
 	if err != nil {
-		return fmt.Errorf("Error retrieving RAM order options: %s", err.Error())
+		return fmt.Errorf("error retrieving RAM order options: %s", err.Error())
 	}
 
 	optionList := make([]map[string]any, 0, len(options))
@@ -65,7 +65,7 @@ func dataSourceServerscomRamOrderOptionsRead(d *schema.ResourceData, meta any) e
 	d.SetId(id)
 
 	if err := d.Set("ram_options", optionList); err != nil {
-		return fmt.Errorf("Error setting RAM order options: %s", err.Error())
+		return fmt.Errorf("error setting RAM order options: %s", err.Error())
 	}
 
 	return nil

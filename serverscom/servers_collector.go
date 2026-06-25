@@ -31,8 +31,8 @@ type ServerCollector struct {
 
 // ServerCreateInput represents server (sbm, dedicated, ...) create input interface
 type ServerCreateInput interface {
-	GetHosts() []interface{}
-	SetHosts([]interface{})
+	GetHosts() []any
+	SetHosts([]any)
 }
 
 // ServersResponse represents server (sbm, dedicated, ...) response interface
@@ -132,7 +132,7 @@ func CreateServersBatch(ctx context.Context, client *scgo.Client, requests []*Re
 	// combine hosts input
 	// for any duplicate hostname return error
 	uniqueHostnames := make(map[string]struct{})
-	var combinedHosts []interface{}
+	var combinedHosts []any
 	result := Result{}
 	for _, req := range requests {
 		for _, host := range req.Input.GetHosts() {
@@ -167,7 +167,7 @@ func CreateServersBatch(ctx context.Context, client *scgo.Client, requests []*Re
 		result.Servers = servers
 		result.Error = err
 	default:
-		result.Error = fmt.Errorf("Unknown resource type: %T\n", v)
+		result.Error = fmt.Errorf("unknown resource type: %T", v)
 	}
 
 	for _, req := range requests {
@@ -192,13 +192,13 @@ func calculateServerChecksum(input ServerCreateInput) (string, error) {
 }
 
 // getHostHostname returns host hostname from host input
-func getHostHostname(hostInput interface{}) (string, error) {
+func getHostHostname(hostInput any) (string, error) {
 	switch v := hostInput.(type) {
 	case scgo.DedicatedServerHostInput:
 		return v.Hostname, nil
 	case scgo.SBMServerHostInput:
 		return v.Hostname, nil
 	default:
-		return "", fmt.Errorf("Unknown host input type: %T\n", v)
+		return "", fmt.Errorf("unknown host input type: %T", v)
 	}
 }

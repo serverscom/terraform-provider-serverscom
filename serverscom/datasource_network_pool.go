@@ -31,7 +31,7 @@ func datasourceServerscomNetworkPool() *schema.Resource {
 	}
 }
 
-func datasourceServerscomNetworkPoolRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func datasourceServerscomNetworkPoolRead(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*scgo.Client)
 
 	var foundNetworkPool *scgo.NetworkPool
@@ -58,7 +58,7 @@ func datasourceServerscomNetworkPoolRead(ctx context.Context, d *schema.Resource
 		foundNetworkPool = networkPool
 	}
 
-	flattenNetworkPool, err := flattenServerscomNetworkPool(foundNetworkPool, meta, nil)
+	flattenNetworkPool, err := flattenServerscomNetworkPool(foundNetworkPool)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -72,7 +72,7 @@ func datasourceServerscomNetworkPoolRead(ctx context.Context, d *schema.Resource
 	return nil
 }
 
-func findNetworkPoolByCidr(pools []interface{}, cidr string) (*scgo.NetworkPool, error) {
+func findNetworkPoolByCidr(pools []any, cidr string) (*scgo.NetworkPool, error) {
 	results := make([]scgo.NetworkPool, 0)
 
 	for _, p := range pools {
@@ -94,13 +94,13 @@ func findNetworkPoolByCidr(pools []interface{}, cidr string) (*scgo.NetworkPool,
 	return nil, fmt.Errorf("too many network pools found with cidr %s (found %d, expected 1)", cidr, len(results))
 }
 
-func findNetworkPools(ctx context.Context, client *scgo.Client, searchPattern string) ([]interface{}, error) {
+func findNetworkPools(ctx context.Context, client *scgo.Client, searchPattern string) ([]any, error) {
 	networkPoolsList, err := client.NetworkPools.Collection().SetParam("search_pattern", searchPattern).Collect(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	var list = make([]interface{}, len(networkPoolsList))
+	var list = make([]any, len(networkPoolsList))
 
 	for i, p := range networkPoolsList {
 		list[i] = p
