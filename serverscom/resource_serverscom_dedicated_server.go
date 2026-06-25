@@ -18,7 +18,15 @@ import (
 
 var (
 	serverscomDedicatedServerDefaultCreateTimeout = 24 * time.Hour
+	serverscomDedicatedServerDefaultUpdateTimeout = 4 * time.Hour
 	serverscomDedicatedServerDefaultDeleteTimeout = 1 * time.Hour
+
+	// dedicatedServerReinstallFields are the fields that can only be applied
+	// through an OS reinstall (which destroys all data on disk). Changing any of
+	// them requires bumping reinstall_trigger to acknowledge the reinstall.
+	// ssh_key_fingerprints and user_data are intentionally NOT here: they are
+	// applied in-place via the API (and also passed into the reinstall payload).
+	dedicatedServerReinstallFields = []string{"operating_system", "layout"}
 )
 
 func resourceServerscomDedicatedServer() *schema.Resource {
@@ -33,6 +41,7 @@ func resourceServerscomDedicatedServer() *schema.Resource {
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(serverscomDedicatedServerDefaultCreateTimeout),
+			Update: schema.DefaultTimeout(serverscomDedicatedServerDefaultUpdateTimeout),
 			Delete: schema.DefaultTimeout(serverscomDedicatedServerDefaultDeleteTimeout),
 		},
 
@@ -158,12 +167,8 @@ func resourceServerscomDedicatedServer() *schema.Resource {
 			"user_data": {
 				Type:         schema.TypeString,
 				Optional:     true,
-				ForceNew:     true,
+				Sensitive:    true,
 				ValidateFunc: validation.NoZeroValues,
-				StateFunc:    HashStringStateFunc(),
-				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-					return new != "" && old == d.Get("user_data")
-				},
 			},
 			"configuration": {
 				Type:     schema.TypeString,
@@ -191,6 +196,18 @@ func resourceServerscomDedicatedServer() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"operational_status": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+			"reinstall_trigger": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Default:  reinstallTriggerNone,
+				Description: "Changing this to any value other than \"" + reinstallTriggerNone + "\" performs an OS reinstall, " +
+					"which DESTROYS ALL DATA on disk. A reinstall is required to apply changes to operating_system, " +
+					"layout or ssh_key_fingerprints; changing one of those without also changing reinstall_trigger fails the plan.",
+			},
 			"labels": {
 				Type:     schema.TypeMap,
 				Optional: true,
@@ -199,7 +216,54 @@ func resourceServerscomDedicatedServer() *schema.Resource {
 				},
 			},
 		},
+
+		CustomizeDiff: resourceServerscomDedicatedServerCustomizeDiff,
 	}
+}
+
+// dedicatedServerOperationalStatusNormal is the operational_status a dedicated
+// server reports when it is not undergoing any operation (e.g. a reinstall).
+const dedicatedServerOperationalStatusNormal = "normal"
+
+// reinstallTriggerNone is the sentinel value of reinstall_trigger that means
+// "no reinstall". A reinstall is performed only when reinstall_trigger changes
+// to some other value.
+const reinstallTriggerNone = "none"
+
+// dedicatedServerWillReinstall reports whether the planned change to
+// reinstall_trigger should perform an OS reinstall. A reinstall happens only
+// when the value actually changes to something other than the "none" sentinel,
+// so first-time adoption (the field appearing with its default) is a no-op.
+func dedicatedServerWillReinstall(oldTrigger, newTrigger string) bool {
+	return oldTrigger != newTrigger && newTrigger != reinstallTriggerNone
+}
+
+func resourceServerscomDedicatedServerCustomizeDiff(_ context.Context, d *schema.ResourceDiff, _ any) error {
+	// On create there is no reinstall: the OS is installed by the create flow.
+	if d.Id() == "" {
+		return nil
+	}
+
+	var changedTriggers []string
+	for _, field := range dedicatedServerReinstallFields {
+		if d.HasChange(field) {
+			changedTriggers = append(changedTriggers, field)
+		}
+	}
+
+	oldTrigger, newTrigger := d.GetChange("reinstall_trigger")
+	willReinstall := dedicatedServerWillReinstall(oldTrigger.(string), newTrigger.(string))
+
+	if len(changedTriggers) > 0 && !willReinstall {
+		return fmt.Errorf(
+			"changing %v requires an OS reinstall, which DESTROYS ALL DATA on disk; "+
+				"set reinstall_trigger to a new value (other than %q) to acknowledge and perform the reinstall, "+
+				"or revert these fields",
+			changedTriggers, reinstallTriggerNone,
+		)
+	}
+
+	return nil
 }
 
 func resourceServerscomDedicatedServerRead(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
@@ -228,6 +292,7 @@ func resourceServerscomDedicatedServerRead(ctx context.Context, d *schema.Resour
 	d.Set("private_ipv4_address", dedicatedServer.PrivateIPv4Address)
 	d.Set("public_ipv4_address", dedicatedServer.PublicIPv4Address)
 	d.Set("status", dedicatedServer.Status)
+	d.Set("operational_status", dedicatedServer.OperationalStatus)
 	d.Set("server_model", dedicatedServer.ConfigurationDetails.ServerModelName)
 	d.Set("public_uplink", dedicatedServer.ConfigurationDetails.PublicUplinkName)
 	d.Set("private_uplink", dedicatedServer.ConfigurationDetails.PrivateUplinkName)
@@ -268,6 +333,41 @@ func resourceServerscomDedicatedServerRead(ctx context.Context, d *schema.Resour
 }
 
 func resourceServerscomDedicatedServerUpdate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
+	client := meta.(*scgo.Client)
+
+	// A reinstall or update request is rejected while the server is still busy
+	// with a previous operation, so wait until it settles to "normal" first.
+	if err := waitForDedicatedServerOperationalNormal(ctx, d, meta); err != nil {
+		return diag.Errorf("error waiting for dedicated server (%s) to become ready for update: %s", d.Id(), err)
+	}
+
+	oldTrigger, newTrigger := d.GetChange("reinstall_trigger")
+	willReinstall := dedicatedServerWillReinstall(oldTrigger.(string), newTrigger.(string))
+
+	if willReinstall {
+		reinstallInput, err := buildDedicatedServerReinstallInput(ctx, d)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		reinstalledServer, err := client.Hosts.ReinstallOperatingSystemForDedicatedServer(ctx, d.Id(), *reinstallInput)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		// Rely on the reinstall response: it returns the server already in its
+		// in-progress operational status (e.g. "installation"). Anchor the wait
+		// on that status, then wait for it to return to "normal".
+		pending := []string{}
+		if s := reinstalledServer.OperationalStatus; s != "" && s != dedicatedServerOperationalStatusNormal {
+			pending = append(pending, s)
+		}
+
+		if _, err := waitForDedicatedServerAttribute(ctx, d, dedicatedServerOperationalStatusNormal, pending, "operational_status", meta, schema.TimeoutUpdate); err != nil {
+			return diag.Errorf("error waiting for dedicated server (%s) reinstall to complete: %s", d.Id(), err)
+		}
+	}
+
 	input := scgo.DedicatedServerUpdateInput{}
 
 	hasChanges := false
@@ -290,17 +390,85 @@ func resourceServerscomDedicatedServerUpdate(ctx context.Context, d *schema.Reso
 		}
 	}
 
-	if hasChanges {
-		client := meta.(*scgo.Client)
+	// user_data is applied in-place via PATCH; unlike SSH keys it cannot be part
+	// of the reinstall payload (the dedicated reinstall API has no user_data field).
+	if d.HasChange("user_data") {
+		hasChanges = true
+		userData := d.Get("user_data").(string)
+		input.UserData = &userData
+	}
 
+	if hasChanges {
 		if _, err := client.Hosts.UpdateDedicatedServer(ctx, d.Id(), input); err != nil {
 			return diag.FromErr(err)
 		}
-
-		return resourceServerscomDedicatedServerRead(ctx, d, meta)
 	}
 
-	return nil
+	return resourceServerscomDedicatedServerRead(ctx, d, meta)
+}
+
+// buildDedicatedServerReinstallInput assembles the reinstall payload from the
+// current (post-change) resource configuration. Only the fields the reinstall
+// API accepts are included: hostname, operating system, drive layout and SSH
+// keys. SSH keys and user_data are not managed independently for now — keys are
+// simply passed into the reinstall as-is, and user_data stays ForceNew.
+func buildDedicatedServerReinstallInput(ctx context.Context, d *schema.ResourceData) (*scgo.OperatingSystemReinstallInput, error) {
+	location, err := getLocation(ctx, d.Get("location").(string))
+	if err != nil {
+		return nil, err
+	}
+
+	serverModel, err := getServerModel(ctx, location.ID, d.Get("server_model").(string))
+	if err != nil {
+		return nil, err
+	}
+
+	input := &scgo.OperatingSystemReinstallInput{
+		Hostname: d.Get("hostname").(string),
+	}
+
+	if operatingSystemName, ok := d.GetOk("operating_system"); ok {
+		operatingSystem, err := getOperatingSystem(ctx, location.ID, serverModel.ID, operatingSystemName.(string))
+		if err != nil {
+			return nil, err
+		}
+		input.OperatingSystemID = &operatingSystem.ID
+	}
+
+	layouts := getLayouts(d)
+	reinstallLayouts := make([]scgo.OperatingSystemReinstallLayoutInput, 0, len(layouts))
+	for _, layout := range layouts {
+		reinstallLayout := scgo.OperatingSystemReinstallLayoutInput{
+			SlotPositions: layout.SlotPositions,
+			Raid:          layout.Raid,
+		}
+
+		for _, partition := range layout.Partitions {
+			reinstallLayout.Partitions = append(
+				reinstallLayout.Partitions,
+				scgo.OperatingSystemReinstallPartitionInput{
+					Target: partition.Target,
+					Size:   partition.Size,
+					Fs:     partition.Fs,
+					Fill:   partition.Fill,
+				},
+			)
+		}
+
+		reinstallLayouts = append(reinstallLayouts, reinstallLayout)
+	}
+	input.Drives = scgo.OperatingSystemReinstallDrivesInput{Layout: reinstallLayouts}
+
+	if val, ok := d.GetOk("ssh_key_fingerprints"); ok {
+		input.SSHKeyFingerprints = expandedStringList(val.([]any))
+	}
+
+	if userData, ok := d.GetOk("user_data"); ok {
+		userDataValue := userData.(string)
+		input.UserData = &userDataValue
+	}
+
+	return input, nil
 }
 
 func resourceServerscomDedicatedServerDelete(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
@@ -713,6 +881,27 @@ func getLayouts(d *schema.ResourceData) []scgo.DedicatedServerLayoutInput {
 	}
 
 	return layoutInput
+}
+
+// waitForDedicatedServerOperationalNormal blocks until the server's
+// operational_status is "normal", i.e. no operation (such as a reinstall) is in
+// progress. It checks the current status first to avoid the poll delay when the
+// server is already idle. The API rejects reinstall/update requests while an
+// operation is still running, so callers must settle to "normal" beforehand.
+func waitForDedicatedServerOperationalNormal(ctx context.Context, d *schema.ResourceData, meta any) error {
+	client := meta.(*scgo.Client)
+
+	dedicatedServer, err := client.Hosts.GetDedicatedServer(ctx, d.Id())
+	if err != nil {
+		return err
+	}
+
+	if dedicatedServer.OperationalStatus == dedicatedServerOperationalStatusNormal {
+		return nil
+	}
+
+	_, err = waitForDedicatedServerAttribute(ctx, d, dedicatedServerOperationalStatusNormal, []string{}, "operational_status", meta, schema.TimeoutUpdate)
+	return err
 }
 
 func waitForDedicatedServerAttribute(ctx context.Context, d *schema.ResourceData, target string, pending []string, attribute string, meta any, timeoutKey string) (any, error) {
